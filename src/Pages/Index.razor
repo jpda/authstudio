@@ -1,0 +1,15 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>codeflow and pkce debugger</h1>
+
+<PkceChallenge PkceModel="@PkceChallengeModel" />
+<ClientInfo PkceModel="@PkceChallengeModel" />
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+
+@code {
+    [CascadingParameter]
+    private PkceChallengeModel PkceChallengeModel { get; set; } = new PkceChallengeModel();
+}

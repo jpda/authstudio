@@ -1,0 +1,77 @@
+﻿@using System.Text.Json.Serialization
+@page "/code"
+@inject IHttpClientFactory ClientFactory
+
+<PageTitle>Home</PageTitle>
+
+<h1>codeflow and pkce debugger</h1>
+
+<div class="mb-3">
+    <h4>authorization code</h4>
+    <code>@Code</code>
+</div>
+<div class="mb-3">
+    <h4>id token</h4>
+    <code>@Token</code>
+</div>
+<div class="mb-3">
+    <h4>raw</h4>
+    <code>@Token</code>
+</div>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "code")]
+    public string Code { get; set; } = "";
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "state")]
+    public string State { get; set; } = "";
+
+    public string Token { get; set; } = "";
+    public string Response { get; set; } = "";
+
+    private async Task RedeemCode()
+    {
+        var client = ClientFactory.CreateClient("AuthClient");
+
+        var data = new List<KeyValuePair<string, string>>() {
+new ("code", Code),
+new ("grant_type", "authorization_code"),
+new ("redirect_uri", "http://localhost:5087/code"),
+new ("client_id", "jwtjwtjwt"),
+new ("scope", "openid profile"),
+new ("code_verifier", State)
+};
+
+        var tokenResponse = await client.PostAsync("https://localhost:5001/connect/token", new FormUrlEncodedContent(data));
+        var response = await tokenResponse.Content.ReadAsStringAsync();
+        Response = response;
+
+        var token = await JsonSeriazlier.DeserializeAsync<TokenResponse>(response);
+        Token = token.RootElement.ToString();
+    }
+
+    protected async override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Code) && string.IsNullOrEmpty(Response))
+        {
+            await RedeemCode();
+        }
+    }
+
+    public class TokenResponse
+    {
+        [JsonPropertyName("access_token")]
+        public string AccessToken { get; set; } = "";
+        [JsonPropertyName("id_token")]
+        public string IdToken { get; set; } = "";
+        [JsonPropertyName("expires_in")]
+        public int ExpiresIn { get; set; } = 0;
+        [JsonPropertyName("refresh_token")]
+        public string RefreshToken { get; set; } = "";
+        [JsonPropertyName("scope")]
+        public string Scope { get; set; } = "";
+
+    }
+}

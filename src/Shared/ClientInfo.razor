@@ -1,0 +1,120 @@
+﻿@using System.Security.Cryptography;
+@using System.Text;
+@using System.ComponentModel.DataAnnotations;
+
+<h2>App Info</h2>
+<div class="alert alert-secondary mt-4">
+    <EditForm Model="Client" OnSubmit="SubmitForm">
+        <DataAnnotationsValidator />
+
+
+        <div class="mb-3">
+            <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label>
+            <InputText id="authorizeEndpoint" class="form-control" @bind-Value="Client.AuthorizeEndpoint" />
+        </div>
+
+        <div class="mb-3">
+            <label for="clientId" class="form-label">Client Id</label>
+            <InputText id="clientId" class="form-control" @bind-Value="Client.ClientId" />
+            <ValidationMessage For="@(() => Client.ClientId)" />
+        </div>
+        <div class="mb-3">
+            <label for="clientSecret" class="form-label">Client Secret</label>
+            <InputText id="clientSecret" class="form-control" @bind-Value="Client.ClientSecret" />
+            <ValidationMessage For="@(() => Client.ClientSecret)" />
+        </div>
+        <div class="mb-3">
+            <label for="redirectUri" class="form-label">Redirect Uri</label>
+            <InputText id="redirectUri" class="form-control" @bind-Value="Client.RedirectUri" />
+            <ValidationMessage For="@(() => Client.RedirectUri)" />
+        </div>
+        <div class="mb-3">
+            <label for="scope" class="form-label">Scope</label>
+            <InputText id="scope" class="form-control" @bind-Value="Client.Scope" />
+            <ValidationMessage For="@(() => Client.Scope)" />
+        </div>
+        <div class="mb-3">
+            <label for="responseType" class="form-label">Response Type</label>
+            <InputText id="responseType" class="form-control" @bind-Value="Client.ResponseType" />
+            <ValidationMessage For="@(() => Client.ResponseType)" />
+        </div>
+        <div class="mb-3">
+            <label for="grantType" class="form-label">Grant Type</label>
+            <InputText id="grantType" class="form-control" @bind-Value="Client.GrantType" />
+            <ValidationMessage For="@(() => Client.GrantType)" />
+        </div>
+        <div class="mb-3">
+            <label for="codeChallenge" class="form-label">Code Challenge</label>
+            <InputText id="codeChallenge" class="form-control" @bind-Value="Client.PkceModel.CodeChallenge" />
+            <ValidationMessage For="@(() => Client.PkceModel.CodeChallenge)" />
+        </div>
+        <div class="mb-3">
+            <label for="AuthorizeUrl" class="form-label">Authorize URL</label>
+            <InputText id="codeChallenge" class="form-control" @bind-Value="Client.AuthorizeUrl" disabled="true" />
+        </div>
+        <div class="mb-3">
+            <NavLink href="@Client.AuthorizeUrl" class="btn btn-primary" target="_blank">Authorize</NavLink>
+        </div>
+        @* <button type="submit" class="btn btn-primary">Authorize</button> *@
+    </EditForm>
+</div>
+
+@code {
+    @* public class IssuerInfoModel
+{
+public string Issuer { get; set; } = "https://login.sck.sh/";
+public string AuthorizeEndpoint { get; set; } = "https://login.sck.sh/connect/authorize";
+public string TokenEndpoint { get; set; } = "https://login.sck.sh/connect/token";
+} *@
+    [Parameter]
+    public PkceChallengeModel PkceModel { get; set; } = new PkceChallengeModel();
+
+    public ClientInfoModel Client { get; set; } = new ClientInfoModel();
+
+    public class ClientInfoModel
+    {
+        public string AuthorizeEndpoint { get; set; } = "https://login.sck.sh/connect/authorize";
+        public string ClientId { get; set; } = "jwtjwtjwt";
+        public string ClientSecret { get; set; } = "";
+        public string RedirectUri { get; set; } = "http://localhost:5087/code";
+        public string Scope { get; set; } = "openid profile";
+        public string ResponseType { get; set; } = "code";
+        public string GrantType { get; set; } = "authorization_code";
+        public string CodeChallenge { get; set; } = "";
+        public string ChallengeMethod { get; set; } = "S256";
+        public PkceChallengeModel PkceModel { get; set; } = new PkceChallengeModel();
+        public string AuthorizeUrl
+        {
+            get
+            {
+                return
+                $@"{AuthorizeEndpoint}?client_id={ClientId}&redirect_uri={Uri.EscapeDataString(RedirectUri)}&response_type={ResponseType}&scope={Scope}&code_challenge={PkceModel.CodeChallenge}&code_challenge_method={PkceModel.CodeChallengeMethod}&state={PkceModel.CodeVerifier}";
+            }
+            set { }
+        }
+    }
+
+
+
+    protected override void OnInitialized()
+    {
+        Client.PkceModel = PkceModel;
+        GenerateAuthorizationUrl();
+        base.OnInitialized();
+    }
+
+    public void GenerateAuthorizationUrl()
+    {
+        @* var baseUri = new Uri("https://login.sck.sh/connect/authorize");
+var query =
+$@"?client_id={Client.ClientId}&redirect_uri={Uri.EscapeDataString(Client.RedirectUri)}&response_type={Client.ResponseType}&scope={Client.Scope}&code_challenge={PkceModel.CodeChallenge}&code_challenge_method=S256";
+var a = new Uri($"{baseUri}{query}");
+Client.AuthorizeUrl = a.AbsoluteUri; *@
+    }
+
+    public void SubmitForm()
+    {
+        GenerateAuthorizationUrl();
+    }
+
+}
