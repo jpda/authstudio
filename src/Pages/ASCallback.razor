@@ -16,7 +16,7 @@
 </div>
 <div class="mb-3">
     <h4>raw</h4>
-    <code>@Token</code>
+    <code>@Response</code>
 </div>
 
 @code {
@@ -30,26 +30,33 @@
 
     public string Token { get; set; } = "";
     public string Response { get; set; } = "";
+    public string TokenEndpoint { get; set; } = "";
+
+    public TokenPayload Tokens { get; set; } = new TokenPayload();
 
     private async Task RedeemCode()
     {
         var client = ClientFactory.CreateClient("AuthClient");
 
         var data = new List<KeyValuePair<string, string>>() {
-new ("code", Code),
-new ("grant_type", "authorization_code"),
-new ("redirect_uri", "http://localhost:5087/code"),
-new ("client_id", "jwtjwtjwt"),
-new ("scope", "openid profile"),
-new ("code_verifier", State)
-};
+            new ("code", Code),
+            new ("grant_type", "authorization_code"),
+            new ("redirect_uri", "http://localhost:5087/code"),
+            new ("client_id", "jwtjwtjwt"),
+            new ("scope", "openid profile"),
+            new ("code_verifier", State)
+        };
 
         var tokenResponse = await client.PostAsync("https://localhost:5001/connect/token", new FormUrlEncodedContent(data));
-        var response = await tokenResponse.Content.ReadAsStringAsync();
-        Response = response;
+        var rawResponse = await tokenResponse.Content.ReadAsStringAsync();
+        var response = await tokenResponse.Content.ReadAsStreamAsync();
+        Response = rawResponse;
+        Console.WriteLine(rawResponse);
 
-        var token = await JsonSeriazlier.DeserializeAsync<TokenResponse>(response);
-        Token = token.RootElement.ToString();
+        var token = await System.Text.Json.JsonSerializer.DeserializeAsync<TokenPayload>(response);
+
+        if (token != null)
+        { Tokens = token; }
     }
 
     protected async override void OnParametersSet()
@@ -60,7 +67,7 @@ new ("code_verifier", State)
         }
     }
 
-    public class TokenResponse
+    public class TokenPayload
     {
         [JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = "";
