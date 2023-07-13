@@ -1,6 +1,4 @@
-﻿@using System.Security.Cryptography;
-@using System.Text;
-@using System.ComponentModel.DataAnnotations;
+﻿@inject NavigationManager NavigationManager
 
 <h2>App Info</h2>
 <div class="alert alert-secondary mt-4">
@@ -53,19 +51,13 @@
             <InputText id="codeChallenge" class="form-control" @bind-Value="Client.AuthorizeUrl" disabled="true" />
         </div>
         <div class="mb-3">
-            <NavLink href="@Client.AuthorizeUrl" class="btn btn-primary" target="_blank">Authorize</NavLink>
+            <NavLink href="@Client.AuthorizeUrl" class="btn btn-primary" target="authorize">Authorize</NavLink>
         </div>
         @* <button type="submit" class="btn btn-primary">Authorize</button> *@
     </EditForm>
 </div>
 
 @code {
-    @* public class IssuerInfoModel
-{
-public string Issuer { get; set; } = "https://login.sck.sh/";
-public string AuthorizeEndpoint { get; set; } = "https://login.sck.sh/connect/authorize";
-public string TokenEndpoint { get; set; } = "https://login.sck.sh/connect/token";
-} *@
     [Parameter]
     public PkceChallengeModel PkceModel { get; set; } = new PkceChallengeModel();
 
@@ -93,11 +85,9 @@ public string TokenEndpoint { get; set; } = "https://login.sck.sh/connect/token"
             set { }
         }
     }
-
-
-
     protected override void OnInitialized()
     {
+        Client.RedirectUri = NavigationManager.BaseUri + "code";
         Client.PkceModel = PkceModel;
         GenerateAuthorizationUrl();
         base.OnInitialized();
@@ -105,11 +95,7 @@ public string TokenEndpoint { get; set; } = "https://login.sck.sh/connect/token"
 
     public void GenerateAuthorizationUrl()
     {
-        @* var baseUri = new Uri("https://login.sck.sh/connect/authorize");
-var query =
-$@"?client_id={Client.ClientId}&redirect_uri={Uri.EscapeDataString(Client.RedirectUri)}&response_type={Client.ResponseType}&scope={Client.Scope}&code_challenge={PkceModel.CodeChallenge}&code_challenge_method=S256";
-var a = new Uri($"{baseUri}{query}");
-Client.AuthorizeUrl = a.AbsoluteUri; *@
+
     }
 
     public void SubmitForm()

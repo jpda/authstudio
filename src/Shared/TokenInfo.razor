@@ -1,0 +1,55 @@
+﻿@inject NavigationManager NavigationManager
+
+
+<h2>token info</h2>
+<div class="alert alert-secondary mt-4">
+    <EditForm Model="Token">
+        <div class="mb-3">
+            <label for="idToken" class="form-label">ID Token</label>
+            <InputTextArea id="idToken" class="form-control" @bind-Value="Token.IdToken" />
+            <div class="form-text">Inspect with <a href="https://jwt.ms/#id_token=@Token.IdToken"
+                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/?id_token=@Token.IdToken"
+                    target="tokeninfo">jwt.io</a></div>
+        </div>
+        <div class="mb-3">
+            <label for="accessToken" class="form-label">Access token </label>
+            <InputTextArea id="accessToken" class="form-control" @bind-Value="Token.AccessToken" />
+            <div class="form-text">Inspect with <a href="https://jwt.ms/#access_token=@Token.AccessToken"
+                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/?access_token=@Token.AccessToken"
+                    target="tokeninfo">jwt.io</a></div>
+        </div>
+        <div class="mb-3">
+            <label for="refreshToken" class="form-label">Refresh token</label>
+            <InputText id="refreshToken" class="form-control" @bind-Value="Token.RefreshToken" />
+            <div class="form-text">Generally opaque, these are not usually decodable client-side</div>
+        </div>
+        <div class="mb-3">
+            <label for="expiresIn" class="form-label">Expires in</label>
+            <span id="expiresIn" class="form-control">@Token.ExpiresAt.DateTime.ToLocalTime()</span>
+            <div class="form-text">When this token expires in local browser time</div>
+
+        </div>
+        <div class="mb-3">
+            <label for="tokenType" class="form-label">Token type</label>
+            <span id="tokenType" class="form-control-plaintext">@Token.TokenType</span>
+            <div class="form-text">How to use this token</div>
+        </div>
+
+        <div class="mb-3">
+            <label for="scope" class="form-label">Scope</label>
+            <code id="scope" class="form-control-plaintext">@Token.Scope</code>
+            <div class="form-text">Scopes for which this token was granted</div>
+        </div>
+        @* <button type="submit" class="btn btn-primary">Authorize</button> *@
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    public TokenResponseModel Token { get; set; } = new TokenResponseModel();
+    protected override void OnInitialized()
+    {
+
+        base.OnInitialized();
+    }
+}
