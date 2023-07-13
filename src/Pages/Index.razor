@@ -9,6 +9,9 @@
 <ClientAppInfo @bind-ClientApp=@ClientApp />
 <AuthorizeRequestInfo Issuer=@Issuer PkceChallenge=@PkceChallenge ClientApp=@ClientApp />
 
+// read about the component binding pattern here:
+// https://learn.microsoft.com/en-us/aspnet/core/blazor/components/data-binding?view=aspnetcore-7.0#binding-with-component-parameters
+
 @code {
     public IssuerModel Issuer { get; set; } = new IssuerModel()
         {
