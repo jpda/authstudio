@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 namespace authstudio;
-public static class Pkce
+
+public static class PkcePairGenerator
 {
-    // see https://dotnetfiddle.net/8jxMYZ
+  // see https://dotnetfiddle.net/8jxMYZ
     public const string VERIFIER_CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQURSTWXYZabcdefghijklmnopqurstwxyz0123456789-._~";
 
     public static string GenerateVerifier(int codeLength = 43)
@@ -36,5 +37,5 @@ public static class Pkce
         string base64UrlEncoded = Convert.ToBase64String(codeVerifierSha256).Replace("=", "").Replace("+", "-").Replace("/",
         "_");
         return base64UrlEncoded;
-    }
+    }  
 }

@@ -1,23 +1,20 @@
-﻿@using System.Security.Cryptography;
-@using System.Text;
-@using System.ComponentModel.DataAnnotations;
-@using authstudio;
+﻿@using authstudio;
 
 <h2>PKCE code generator</h2>
 <div class="alert alert-secondary mt-4">
-    <EditForm Model="PkceModel" OnSubmit="SubmitForm">
+    <EditForm Model="Pkce" OnSubmit="SubmitForm">
         <DataAnnotationsValidator />
         <div class="mb-3">
             <label for="CodeVerifier" class="form-label">Code Verifier</label>
-            <InputText @bind-Value="PkceModel.CodeVerifier" class="form-control" disabled="true" />
+            <InputText @bind-Value="Pkce.CodeVerifier" class="form-control" disabled="true" />
         </div>
         <div class="mb-3">
             <label for="CodeChallenge" class="form-label">Code Challenge</label>
-            <InputText @bind-Value="PkceModel.CodeChallenge" class="form-control" disabled="true" />
+            <InputText @bind-Value="Pkce.CodeChallenge" class="form-control" disabled="true" />
         </div>
         <div class="mb-3">
             <label for="CodeChallengeMethod" class="form-label">Challenge method</label>
-            <span>@PkceModel.CodeChallengeMethod</span>
+            <span>@Pkce.CodeChallengeMethod</span>
         </div>
         <button type="submit" class="btn btn-primary">Generate</button>
     </EditForm>
@@ -25,23 +22,27 @@
 
 @code {
     [Parameter]
-    public PkceChallengeModel PkceModel { get; set; } = new PkceChallengeModel();
+    public PkceChallengeModel Pkce { get; set; } = new PkceChallengeModel();
 
-    protected override void OnInitialized()
+    [Parameter]
+    public EventCallback<PkceChallengeModel> PkceChanged { get; set; }
+
+
+    private async Task SubmitForm()
     {
-        GenerateCodes();
-        base.OnInitialized();
+        await GenerateCodes();
+        await PkceChanged.InvokeAsync(Pkce);
     }
 
-    protected void SubmitForm()
+    protected override async Task OnInitializedAsync()
     {
-        GenerateCodes();
+        await GenerateCodes();
+        await base.OnInitializedAsync();
     }
 
-    protected void GenerateCodes()
+    protected async Task GenerateCodes()
     {
-        PkceModel.CodeVerifier = Pkce.GenerateVerifier(PkceModel.Length);
-        PkceModel.CodeChallenge = Pkce.CreateChallenge(PkceModel.CodeVerifier);
-        PkceModel.CodeChallengeMethod = "S256";
+        Pkce.GenerateChallenge();
+        await PkceChanged.InvokeAsync(Pkce);
     }
 }

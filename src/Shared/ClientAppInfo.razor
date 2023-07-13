@@ -1,0 +1,43 @@
+﻿@inject NavigationManager NavigationManager
+
+<h2>Client app</h2>
+<div class="alert alert-secondary mt-4">
+    <EditForm Model="ClientApp" OnSubmit="SubmitForm">
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+            <label for="clientId" class="form-label">Client Id</label>
+            <InputText id="clientId" class="form-control" @bind-Value="ClientApp.ClientId" />
+        </div>
+        <div class="mb-3">
+            <label for="clientSecret" class="form-label">Client Secret</label>
+            <InputText id="clientSecret" class="form-control" @bind-Value="ClientApp.ClientSecret" />
+        </div>
+        <div class="mb-3">
+            <label for="redirectUri" class="form-label">Redirect Uri</label>
+            <InputText id="redirectUri" class="form-control" @bind-Value="ClientApp.RedirectUri" />
+        </div>
+        <button type="submit" class="btn btn-primary">Update client details</button>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
+
+    [Parameter]
+    public EventCallback<ClientAppModel> ClientAppChanged { get; set; }
+    protected async override Task OnInitializedAsync()
+    {
+        if (ClientApp.RedirectUri == null || ClientApp.RedirectUri == "")
+        {
+            ClientApp.RedirectUri = NavigationManager.BaseUri + "code";
+            await ClientAppChanged.InvokeAsync(ClientApp);
+        }
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SubmitForm()
+    {
+        await ClientAppChanged.InvokeAsync(ClientApp);
+    }
+}

@@ -7,6 +7,12 @@
 
 <h1>codeflow and pkce debugger</h1>
 
+@* <div class="alert alert-secondary mt-4">
+    <EditForm Model="Client" OnSubmit="RedeemCode">
+        <DataAnnotationsValidator />
+    </EditForm>
+</div> *@
+
 <div class="mb-3">
     <h4>issuer</h4>
     <code>@Issuer</code>
@@ -24,12 +30,28 @@
     <button class="btn btn-primary" @onclick="RedeemCode">Redeem Code</button>
 </div>
 
-@if (!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken) || !string.IsNullOrEmpty(Tokens.RefreshToken))
+@if (!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken) ||
+!string.IsNullOrEmpty(Tokens.RefreshToken))
 {
     <TokenInfo Token="Tokens" />
 }
 
 @code {
+
+    public class RedeemCodeModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Code { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string State { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Issuer { get; set; } = "";
+
+    }
+
+
     [Parameter]
     [SupplyParameterFromQuery(Name = "code")]
     public string Code { get; set; } = "";
@@ -61,6 +83,7 @@ new ("scope", "openid profile"),
 // obviously we would never want to do this for real - it completely defeats the purpose of the verifier
 new ("code_verifier", State)
 };
+
 
         var tokenResponse = await client.PostAsync($"{Issuer}/connect/token", new FormUrlEncodedContent(data));
         var rawResponse = await tokenResponse.Content.ReadAsStringAsync();

@@ -1,0 +1,65 @@
+@using Microsoft.IdentityModel.Protocols.OpenIdConnect
+
+<h2>Issuer</h2>
+<div class="alert alert-secondary mt-4">
+    <EditForm Model="Issuer" OnSubmit="SubmitForm">
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+            <label for="issuer" class="form-label">Issuer</label>
+            <InputText id="issuer" class="form-control" @bind-Value="Issuer.Issuer" />
+        </div>
+        <div class="mb-3">
+            <label for="configUri" class="form-label">Configurationa endpoint</label>
+            <InputText id="configUri" class="form-control" @bind-Value="Issuer.ConfigurationUri" />
+        </div>
+        <div class="mb-3">
+            <label for="tokenEndpoint" class="form-label">Token endpoint</label>
+            <InputText id="tokenEndpoint" class="form-control" @bind-Value="Issuer.TokenEndpoint" />
+        </div>
+        <div class="mb-3">
+            <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label>
+            <InputText id="authorizeEndpoint" class="form-control" @bind-Value="Issuer.AuthorizeEndpoint" />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </EditForm>
+</div>
+
+@code {
+
+    [Parameter]
+    public IssuerModel Issuer { get; set; } = new IssuerModel();
+
+    [Parameter]
+    public EventCallback<IssuerModel> IssuerChanged { get; set; }
+
+    public async Task SubmitForm()
+    {
+        await FetchOpenIdConfiguration();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Issuer.Issuer))
+        {
+            await FetchOpenIdConfiguration();
+        }
+        await base.OnInitializedAsync();
+    }
+
+    public async Task FetchOpenIdConfiguration()
+    {
+        if (string.IsNullOrEmpty(Issuer.ConfigurationUri))
+        {
+            Issuer.ConfigurationUri = Issuer.Issuer.Contains(".well-known") ? Issuer.Issuer :
+            $"{Issuer.Issuer.TrimEnd('/')}/.well-known/openid-configuration";
+        }
+        var config = await OpenIdConnectConfigurationRetriever.GetAsync(Issuer.ConfigurationUri, CancellationToken.None);
+        Issuer.Issuer = config.Issuer;
+        Issuer.AuthorizeEndpoint = config.AuthorizationEndpoint;
+        Issuer.TokenEndpoint = config.TokenEndpoint;
+        Issuer.UserInfoEndpoint = config.UserInfoEndpoint;
+        Issuer.JwksUri = config.JwksUri;
+        Issuer.IntrospectionEndpoint = config.IntrospectionEndpoint;
+        await IssuerChanged.InvokeAsync(Issuer);
+    }
+}

@@ -1,13 +1,24 @@
 ﻿@page "/"
+@inject AppState state
 
 <PageTitle>Home</PageTitle>
 
 <h1>codeflow and pkce debugger</h1>
 
-<PkceChallenge PkceModel="@PkceChallengeModel" />
-<ClientInfo PkceModel="@PkceChallengeModel" />
+<IssuerInfo @bind-Issuer=@Issuer />
+<PkceChallenge @bind-Pkce=@PkceChallenge />
+<ClientAppInfo @bind-ClientApp=@ClientApp />
+<AuthorizeRequestInfo Issuer=@Issuer PkceChallenge=@PkceChallenge ClientApp=@ClientApp />
 
 @code {
-    [CascadingParameter]
-    private PkceChallengeModel PkceChallengeModel { get; set; } = new PkceChallengeModel();
+    public IssuerModel Issuer { get; set; } = new IssuerModel()
+        {
+            Issuer = "https://login.sck.sh",
+        };
+    public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
+
+    public ClientAppModel ClientApp = new ClientAppModel()
+        {
+            ClientId = "jwtjwtjwt"
+        };
 }
