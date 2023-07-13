@@ -46,7 +46,7 @@
     public string Response { get; set; } = "";
     public string TokenEndpoint { get; set; } = "";
 
-    public TokenResponseModel Tokens { get; set; } = default(TokenResponseModel);
+    public TokenResponseModel Tokens { get; set; } = new TokenResponseModel();
 
     private async Task RedeemCode()
     {
