@@ -1,12 +1,7 @@
 namespace authstudio;
 
-public class NotifyOnChangeModel
-{
-    public event Action? OnChange;
-    protected void NotifyChange() => OnChange?.Invoke();
-}
 
-public class IssuerModel : NotifyOnChangeModel
+public class IssuerModel
 {
     public string Issuer { get; set; } = "";
     public string ConfigurationUri { get; set; } = "";
@@ -17,7 +12,7 @@ public class IssuerModel : NotifyOnChangeModel
     public string IntrospectionEndpoint { get; set; } = "";
 }
 
-public class ClientAppModel : NotifyOnChangeModel
+public class ClientAppModel
 {
     public string ClientId { get; set; } = "";
     public string ClientSecret { get; set; } = "";
@@ -26,7 +21,7 @@ public class ClientAppModel : NotifyOnChangeModel
 
 }
 
-public class AuthorizeRequestModel : NotifyOnChangeModel
+public class AuthorizeRequestModel
 {
     // todo: put cascade here? or too opaque?
     public IssuerModel Issuer { get; set; } = new IssuerModel();
@@ -51,22 +46,12 @@ public class AuthorizeRequestModel : NotifyOnChangeModel
                 { "state", PkceChallenge.CodeVerifier }
             };
             return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Issuer.AuthorizeEndpoint, authorizeParameters);
-
-            // return
-            // $@"{Issuer.AuthorizeEndpoint}?client_id={Client.ClientId}
-            // &redirect_uri={Uri.EscapeDataString(Client.RedirectUri)}
-            // &response_type={ResponseType}&scope={string.Join(' ', Scopes)} 
-            // &code_challenge={PkceModel.CodeChallenge}
-            // &code_challenge_method={PkceModel.CodeChallengeMethod}
-            // &state={PkceModel.CodeVerifier}".Replace(Environment.NewLine, "").Trim();
-            // don't judge me - WebUtilities is deprecated with no replacement and 
-            // verbatim strings keep the linebreaks - so stupid
         }
         set { }
     }
 }
 
-public class RedeemCodeModel : NotifyOnChangeModel
+public class RedeemCodeModel
 {
     public string Code { get; set; } = "";
     public string CodeVerifier { get; set; } = "";
