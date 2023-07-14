@@ -1,4 +1,6 @@
 ﻿@using authstudio;
+@inject IPersistentSettingsRepository SettingsRepository
+@inject IJSRuntime JSRuntime
 
 <h2>PKCE code generator</h2>
 <div class="alert alert-secondary mt-4">
@@ -6,11 +8,19 @@
         <DataAnnotationsValidator />
         <div class="mb-3">
             <label for="CodeVerifier" class="form-label">Code Verifier</label>
-            <InputText @bind-Value="Pkce.CodeVerifier" class="form-control" disabled="true" />
+            <div class="input-group">
+                <button class="btn btn-outline-secondary" type="button"
+                @onclick="async () => await CopyToClipboard(Pkce.CodeVerifier)"><span class="oi oi-clipboard"></span></button>
+                <InputText @bind-Value="Pkce.CodeVerifier" class="form-control" disabled="true" />
+            </div>
         </div>
         <div class="mb-3">
             <label for="CodeChallenge" class="form-label">Code Challenge</label>
-            <InputText @bind-Value="Pkce.CodeChallenge" class="form-control" disabled="true" />
+            <div class="input-group">
+                <button class="btn btn-outline-secondary" type="button"
+                @onclick="async () => await CopyToClipboard(Pkce.CodeChallenge)"><span class="oi oi-clipboard"></span></button>
+                <InputText @bind-Value="Pkce.CodeChallenge" class="form-control" disabled="true" />
+            </div>
         </div>
         <div class="mb-3">
             <label for="CodeChallengeMethod" class="form-label">Challenge method</label>
@@ -44,5 +54,11 @@
     {
         Pkce.GenerateChallenge();
         await PkceChanged.InvokeAsync(Pkce);
+        await SettingsRepository.SetPkceChallengeModelAsync(Pkce);
+    }
+
+    protected async Task CopyToClipboard(string value)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
     }
 }

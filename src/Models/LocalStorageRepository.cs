@@ -2,7 +2,7 @@ using Blazored.LocalStorage;
 
 namespace authstudio;
 
-public interface IOperatingRepository
+public interface IPersistentSettingsRepository
 {
     public Task<IssuerModel> GetIssuerModelAsync();
     public Task<IssuerModel> SetIssuerModelAsync(IssuerModel issuerModel);
@@ -10,8 +10,6 @@ public interface IOperatingRepository
     public Task<ClientAppModel> SetClientAppModelAsync(ClientAppModel clientAppModel);
     public Task<PkceChallengeModel> GetPkceChallengeModelAsync();
     public Task<PkceChallengeModel> SetPkceChallengeModelAsync(PkceChallengeModel pkceChallengeModel);
-    public Task<AuthorizeRequestModel> GetAuthorizeRequestModelAsync();
-    public Task<AuthorizeRequestModel> SetAuthorizeRequestModelAsync(AuthorizeRequestModel authorizeRequestModel);
 }
 
 public interface ITransientRepository
@@ -46,17 +44,12 @@ public class LocalStorageTransientRepository : ITransientRepository
     }
 }
 
-public class LocalStorageOperatingRepository : IOperatingRepository
+public class LocalStoragePersistentSettingsRepository : IPersistentSettingsRepository
 {
     private readonly ILocalStorageService localStorageService;
-    public LocalStorageOperatingRepository(ILocalStorageService localStorageService)
+    public LocalStoragePersistentSettingsRepository(ILocalStorageService localStorageService)
     {
         this.localStorageService = localStorageService;
-    }
-
-    public async Task<AuthorizeRequestModel> GetAuthorizeRequestModelAsync()
-    {
-        return await localStorageService.GetItemAsync<AuthorizeRequestModel>("AuthorizeRequestModel");
     }
 
     public async Task<ClientAppModel> GetClientAppModelAsync()
@@ -72,12 +65,6 @@ public class LocalStorageOperatingRepository : IOperatingRepository
     public async Task<PkceChallengeModel> GetPkceChallengeModelAsync()
     {
         return await localStorageService.GetItemAsync<PkceChallengeModel>("PkceChallengeModel");
-    }
-
-    public async Task<AuthorizeRequestModel> SetAuthorizeRequestModelAsync(AuthorizeRequestModel authorizeRequestModel)
-    {
-        await localStorageService.SetItemAsync("AuthorizeRequestModel", authorizeRequestModel);
-        return authorizeRequestModel;
     }
 
     public async Task<ClientAppModel> SetClientAppModelAsync(ClientAppModel clientAppModel)

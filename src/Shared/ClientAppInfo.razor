@@ -1,4 +1,5 @@
 ﻿@inject NavigationManager NavigationManager
+@inject IPersistentSettingsRepository SettingsRepository
 
 <h2>Client app</h2>
 <div class="alert alert-secondary mt-4">
@@ -38,6 +39,7 @@
 
     private async Task SubmitForm()
     {
+        await SettingsRepository.SetClientAppModelAsync(ClientApp);
         await ClientAppChanged.InvokeAsync(ClientApp);
     }
 }

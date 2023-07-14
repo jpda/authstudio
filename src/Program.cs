@@ -8,7 +8,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddBlazoredLocalStorage();
-builder.Services.AddScoped<IOperatingRepository, LocalStorageOperatingRepository>();
+builder.Services.AddScoped<IPersistentSettingsRepository, LocalStoragePersistentSettingsRepository>();
 builder.Services.AddScoped<ITransientRepository, LocalStorageTransientRepository>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
