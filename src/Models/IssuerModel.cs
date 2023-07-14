@@ -1,5 +1,11 @@
 namespace authstudio;
 
+public class StoredEntity
+{
+    public string Id { get; set; } = "";
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+
+}
 
 public class IssuerModel
 {
@@ -24,6 +30,7 @@ public class ClientAppModel
 public class AuthorizeRequestModel
 {
     // todo: put cascade here? or too opaque?
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public IssuerModel Issuer { get; set; } = new IssuerModel();
     public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
     public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
@@ -42,8 +49,7 @@ public class AuthorizeRequestModel
                 { "scope", ScopeParameter },
                 { "code_challenge", PkceChallenge.CodeChallenge },
                 { "code_challenge_method", PkceChallenge.CodeChallengeMethod.ToString() },
-                // todo: move to storage 
-                { "state", PkceChallenge.CodeVerifier }
+                { "state", Id }
             };
             return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Issuer.AuthorizeEndpoint, authorizeParameters);
         }

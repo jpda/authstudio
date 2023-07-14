@@ -2,20 +2,23 @@
 @page "/code"
 @inject IHttpClientFactory ClientFactory
 @inject NavigationManager NavigationManager
+@inject ITransientRepository TransientRepository
 
 <PageTitle>Home</PageTitle>
 
 <h1>codeflow and pkce debugger</h1>
 
-@* <div class="alert alert-secondary mt-4">
-    <EditForm Model="Client" OnSubmit="RedeemCode">
-        <DataAnnotationsValidator />
-    </EditForm>
-</div> *@
-
 <div class="mb-3">
     <h4>issuer</h4>
     <code>@Issuer</code>
+</div>
+<div class="mb-3">
+    <h4>reqid</h4>
+    <code>@State</code>
+</div>
+<div class="mb-3">
+    <h4>token endpoint</h4>
+    <code>@OriginalRequest.Issuer.TokenEndpoint</code>
 </div>
 <div class="mb-3">
     <h4>authorization code</h4>
@@ -37,21 +40,6 @@
 }
 
 @code {
-
-    public class RedeemCodeModel
-    {
-        [System.ComponentModel.DataAnnotations.Required]
-        public string Code { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required]
-        public string State { get; set; } = "";
-
-        [System.ComponentModel.DataAnnotations.Required]
-        public string Issuer { get; set; } = "";
-
-    }
-
-
     [Parameter]
     [SupplyParameterFromQuery(Name = "code")]
     public string Code { get; set; } = "";
@@ -60,13 +48,12 @@
     [SupplyParameterFromQuery(Name = "state")]
     public string State { get; set; } = "";
 
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "iss")]
     public string Issuer { get; set; } = "";
 
     public string Token { get; set; } = "";
     public string Response { get; set; } = "";
-    public string TokenEndpoint { get; set; } = "";
+
+    private AuthorizeRequestModel OriginalRequest = new AuthorizeRequestModel();
 
     public TokenResponseModel Tokens { get; set; } = new TokenResponseModel();
 
@@ -74,32 +61,33 @@
     {
         var client = ClientFactory.CreateClient("AuthClient");
         var data = new List<KeyValuePair<string, string>>() {
-new ("code", Code),
-new ("grant_type", "authorization_code"),
-// in theory this should always be valid seeing as we got here *somehow*
-new ("redirect_uri", $"{NavigationManager.BaseUri}code"),
-new ("client_id", "jwtjwtjwt"),
-new ("scope", "openid profile"),
-// obviously we would never want to do this for real - it completely defeats the purpose of the verifier
-new ("code_verifier", State)
-};
-
-
-        var tokenResponse = await client.PostAsync($"{Issuer}/connect/token", new FormUrlEncodedContent(data));
+            new ("code", Code),
+            new ("grant_type", "authorization_code"),
+            // in theory this should always be valid seeing as we got here *somehow*
+            new ("redirect_uri", $"{NavigationManager.BaseUri}code"),
+            new ("client_id", OriginalRequest.ClientApp.ClientId),
+            new ("scope", OriginalRequest.ScopeParameter),
+            // obviously we would never want to do this for real - it completely defeats the purpose of the verifier
+            new ("code_verifier", OriginalRequest.PkceChallenge.CodeVerifier)
+        };
+        var tokenResponse = await client.PostAsync($"{OriginalRequest.Issuer.TokenEndpoint}", new FormUrlEncodedContent(data));
         var rawResponse = await tokenResponse.Content.ReadAsStringAsync();
         Response = rawResponse;
 
         var token = System.Text.Json.JsonSerializer.Deserialize<TokenResponseModel>(Response);
 
         if (token != null)
-        { Tokens = token; }
+        {
+            Tokens = token;
+            await TransientRepository.DeleteAuthorizeRequestModelAsync(State);
+        }
     }
 
-    protected override void OnInitialized()
+    protected async override void OnInitialized()
     {
-        if (!string.IsNullOrEmpty(Code) && string.IsNullOrEmpty(Response))
+        if (!string.IsNullOrEmpty(State))
         {
-            //await RedeemCode();
+            OriginalRequest = await TransientRepository.GetAuthorizeRequestModelAsync(State);
         }
         base.OnInitialized();
     }
