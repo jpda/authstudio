@@ -26,7 +26,13 @@
 </div>
 <div class="mb-3">
     <h4>Raw response</h4>
-    <code>@Response</code>
+        <code>
+        <pre style="word-wrap:anywhere;">
+            @if(!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken)) {
+                @(System.Text.Json.JsonSerializer.Serialize(Tokens, new System.Text.Json.JsonSerializerOptions() { WriteIndented = true }))
+            }
+        </pre>
+    </code>
 </div>
 
 <div class="mb-3">
@@ -58,6 +64,11 @@
 
     private async Task RedeemCode()
     {
+        if(Response != string.Empty) {
+            await SetTokenData(Response);
+            return;
+        }
+
         var client = ClientFactory.CreateClient("AuthClient");
         var data = new List<KeyValuePair<string, string>>() {
             new ("code", Code),
@@ -71,8 +82,12 @@
         };
         var tokenResponse = await client.PostAsync($"{OriginalRequest.Issuer.TokenEndpoint}", new FormUrlEncodedContent(data));
         var rawResponse = await tokenResponse.Content.ReadAsStringAsync();
-        Response = rawResponse;
+        await SetTokenData(rawResponse);
+    }
 
+    private async Task SetTokenData(string rawResponse)
+    {
+        Response = rawResponse;
         var token = System.Text.Json.JsonSerializer.Deserialize<TokenResponseModel>(Response);
 
         if (token != null)
@@ -84,6 +99,8 @@
 
     protected async override void OnInitialized()
     {
+            Response = "{\"id_token\":\"eyJhbGciOiJSUzI1NiIsImtpZCI6IkQ3NTUzOTk1MEMwQkJBREVCM0U0NEUxMDc2QTk0NzQwIiwieDV0IjoiS2ZyQm55azdUUGNqRHlYU1diaWw0d2M0WngwIiwidHlwIjoiSldUIn0.eyJpc3MiOiJodHRwczovL3QxLW9pcy5sb2NhbC5kZXZlbnYubG9sIiwibmJmIjoxNzExMDM3Mjk0LCJpYXQiOjE3MTEwMzcyOTQsImV4cCI6MTcxMTA0MDg5NCwiYXVkIjoidG9rZW5kZWJ1Z2dlciIsImFtciI6WyJleHRlcm5hbCJdLCJhdF9oYXNoIjoiRUd1RlVFVFZDZXhWZkhfV2NrVXVWUSIsInNpZCI6IkI1NjNDMUI0RDREM0RFNDNDMUJERjlCRTdBMUU3ODMxIiwic3ViIjoiMDg5NTQxN2UtYWNmZi00OGY0LWEwOGItYTViZDYwNzVjMmM5IiwiYXV0aF90aW1lIjoxNzExMDM3MjkwLCJpZHAiOiJkZW1vaWRzcnYiLCJuYW1lIjoiYWxpY2VzbWl0aEBlbWFpbC5jb20iLCJ0ZW5hbnQiOiIxMDAwMDA4IiwicHJlZmVycmVkX3VzZXJuYW1lX29pcyI6ImFsaWNlc21pdGhAZW1haWwuY29tIiwic2NoZW1lX29pcyI6IkRlbW8gRHVlbmRlIFNlcnZlciIsInRlbmFudF9pZCI6IjEwMDAwMDgiLCJleHRfaWF0IjpbIjE3MTEwMzcyOTAiLCIxNzExMDM3Mjk0Il0sInByZWZlcnJlZF91c2VybmFtZSI6ImFsaWNlc21pdGhAZW1haWwuY29tIn0.JkWjIDul-Ye5EncjVz_r4AVAVN2rwk_PTyFEmArxENu4IYc35RVhNqZnPrrmihlFU1XcM1VlemMh2jaG379spx6qwZg1933ZagPafWvCZ3SQheijKgvmaDOcbLZYGlAC0zAFNv0jdKe4aKFGt89z2dzKOF-gnQGFHARUW0G1DqoXeAVeS_f_SsGtK0m7KLEXvz-kVfb6bixbrFAyd4TxxZl9WtEKuEiznT9Iq4017-ZHls7zV1ePsvoGoficNsrAmTe3g11dTQOrGqCy1CKkmLuDU6CLcxryjUWLXbzUMSwBjtGPdkZxfouk8Aw-EDCkI0oJeE1wvhSvNZqklPrqfw\",\"access_token\":\"eyJhbGciOiJSUzI1NiIsImtpZCI6IkQ3NTUzOTk1MEMwQkJBREVCM0U0NEUxMDc2QTk0NzQwIiwieDV0IjoiS2ZyQm55azdUUGNqRHlYU1diaWw0d2M0WngwIiwidHlwIjoiYXQrand0In0.eyJpc3MiOiJodHRwczovL3QxLW9pcy5sb2NhbC5kZXZlbnYubG9sIiwibmJmIjoxNzExMDM3Mjk0LCJpYXQiOjE3MTEwMzcyOTQsImV4cCI6MTcxMTA0MDg5NCwiYXVkIjoiYXBpOi8vb2lzLm9zLmRldmVudi5sb2wiLCJzY29wZSI6WyJvcGVuaWQiLCJwcm9maWxlIiwiYXBpOi8vb2lzLm9zLmRldmVudi5sb2wvYWRtaW4vdGVuYW50cy5yZWFkIl0sImFtciI6WyJleHRlcm5hbCJdLCJjbGllbnRfaWQiOiJ0b2tlbmRlYnVnZ2VyIiwic3ViIjoiMDg5NTQxN2UtYWNmZi00OGY0LWEwOGItYTViZDYwNzVjMmM5IiwiYXV0aF90aW1lIjoxNzExMDM3MjkwLCJpZHAiOiJkZW1vaWRzcnYiLCJuYW1lIjoiYWxpY2VzbWl0aEBlbWFpbC5jb20iLCJ0ZW5hbnQiOiIxMDAwMDA4IiwicHJlZmVycmVkX3VzZXJuYW1lX29pcyI6ImFsaWNlc21pdGhAZW1haWwuY29tIiwic2NoZW1lX29pcyI6IkRlbW8gRHVlbmRlIFNlcnZlciIsInRlbmFudF9pZCI6IjEwMDAwMDgiLCJleHRfaWF0IjpbIjE3MTEwMzcyOTAiLCIxNzExMDM3Mjk0Il0sInByZWZlcnJlZF91c2VybmFtZSI6ImFsaWNlc21pdGhAZW1haWwuY29tIiwic2lkIjoiQjU2M0MxQjRENEQzREU0M0MxQkRGOUJFN0ExRTc4MzEiLCJqdGkiOiIxNUQxQTFFN0U3QUI5MkEwQjAxMzVDNzYwQTIxNzM3QyJ9.C5r44YB8sHuBoM-ar41YkMzn_hoLc-_eLR_pnEw2LsrPHkVd7ziaw6DoOqVUCLsEcPQvNrq3aiP1V5o4R1yNfvr6Iy5LpFNSfJe8fhoXOQ3d7qr2rwuJd71bFjoD9bt-2LEo6xdARDQYqAAKv9kWQXKQYaYRKKOuUVzYHQoaMAt_rEysVPr5f4kOHH8Tk9EWRpZ9jWf6Gwy3vePGrv-t32CtTfSv_eBlMuwrlBsCl5D3gzvmZVcv3yGVjp00qD5rso0A7FT3KC7WAJ6JqxelW1qme7MONTq9g4vUD5HbG6M7yf4DcFrVx0tC1Ge06riCyrO4iNyObm4V6IsG1xOSpw\",\"expires_in\":3600,\"token_type\":\"Bearer\",\"scope\":\"openid profile api://ois.os.devenv.lol/admin/tenants.read\"}";
+
         if (!string.IsNullOrEmpty(State))
         {
             OriginalRequest = await TransientRepository.GetAuthorizeRequestModelAsync(State);
