@@ -4,13 +4,13 @@ namespace authstudio;
 
 public interface IPersistentSettingsRepository
 {
-    public Task<IssuerModel> GetIssuerModelAsync();
+    public Task<IssuerModel?> GetIssuerModelAsync();
     public Task<IssuerModel> SetIssuerModelAsync(IssuerModel issuerModel);
-    public Task<ClientAppModel> GetClientAppModelAsync();
+    public Task<ClientAppModel?> GetClientAppModelAsync();
     public Task<ClientAppModel> SetClientAppModelAsync(ClientAppModel clientAppModel);
-    public Task<PkceChallengeModel> GetPkceChallengeModelAsync();
+    public Task<PkceChallengeModel?> GetPkceChallengeModelAsync();
     public Task<PkceChallengeModel> SetPkceChallengeModelAsync(PkceChallengeModel pkceChallengeModel);
-    public Task<AuthorizeParameterModel> GetAuthorizeParameterModelAsync();
+    public Task<AuthorizeParameterModel?> GetAuthorizeParameterModelAsync();
     public Task<AuthorizeParameterModel> SetAuthorizeParameterModelAsync(AuthorizeParameterModel authorizeParameterModel);
 }
 
@@ -31,7 +31,7 @@ public class LocalStorageTransientRepository : ITransientRepository
 
     public async Task<AuthorizeRequestModel> GetAuthorizeRequestModelAsync(string id)
     {
-        return await localStorageService.GetItemAsync<AuthorizeRequestModel>($"AuthorizeRequestModel-{id}");
+        return await localStorageService.GetItemAsync<AuthorizeRequestModel>($"AuthorizeRequestModel-{id}") ?? new AuthorizeRequestModel();
     }
 
     public async Task<AuthorizeRequestModel> SetAuthorizeRequestModelAsync(AuthorizeRequestModel authorizeRequestModel)
@@ -46,30 +46,26 @@ public class LocalStorageTransientRepository : ITransientRepository
     }
 }
 
-public class LocalStoragePersistentSettingsRepository : IPersistentSettingsRepository
+public class LocalStoragePersistentSettingsRepository(ILocalStorageService localStorageService) : IPersistentSettingsRepository
 {
-    private readonly ILocalStorageService localStorageService;
-    public LocalStoragePersistentSettingsRepository(ILocalStorageService localStorageService)
-    {
-        this.localStorageService = localStorageService;
-    }
+    private readonly ILocalStorageService localStorageService = localStorageService;
 
-    public async Task<AuthorizeParameterModel> GetAuthorizeParameterModelAsync()
+    public async Task<AuthorizeParameterModel?> GetAuthorizeParameterModelAsync()
     {
         return await localStorageService.GetItemAsync<AuthorizeParameterModel>("AuthorizeParameterModel");
     }
 
-    public async Task<ClientAppModel> GetClientAppModelAsync()
+    public async Task<ClientAppModel?> GetClientAppModelAsync()
     {
         return await localStorageService.GetItemAsync<ClientAppModel>("ClientAppModel");
     }
 
-    public async Task<IssuerModel> GetIssuerModelAsync()
+    public async Task<IssuerModel?> GetIssuerModelAsync()
     {
         return await localStorageService.GetItemAsync<IssuerModel>("IssuerModel");
     }
 
-    public async Task<PkceChallengeModel> GetPkceChallengeModelAsync()
+    public async Task<PkceChallengeModel?> GetPkceChallengeModelAsync()
     {
         return await localStorageService.GetItemAsync<PkceChallengeModel>("PkceChallengeModel");
     }

@@ -52,7 +52,7 @@ public class AuthorizeRequestModel
     {
         get
         {
-            var authorizeParameters = new Dictionary<string, string>
+            var authorizeParameters = new Dictionary<string, string?>
             {
                 { "client_id", ClientApp.ClientId },
                 { "redirect_uri", ClientApp.RedirectUri },

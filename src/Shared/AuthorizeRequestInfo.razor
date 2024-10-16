@@ -7,20 +7,20 @@
 <div class="alert alert-secondary mt-4">
 
     <div class="mb-3">
-        <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label>
+        <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label><br />
         <code id="authorizeEndpoint" class="form-control-readonly">@Issuer.AuthorizeEndpoint</code>
     </div>
     <div class="mb-3">
-        <label for="clientId" class="form-label">Client Id</label>
+        <label for="clientId" class="form-label">Client Id</label><br />
         <code id="clientId" class="form-control-readonly">@ClientApp.ClientId</code>
     </div>
     <div class="mb-3">
-        <label for="clientSecret" class="form-label">Client Secret</label>
-        <span id="clientSecret" class="form-control-readonly">@ClientApp.ClientSecret</span>
+        <label for="clientSecret" class="form-label">Client Secret</label><br />
+        <code id="clientSecret" class="form-control-readonly">@ClientApp.ClientSecret</code>
     </div>
     <div class="mb-3">
-        <label for="redirectUri" class="form-label">Redirect Uri</label>
-        <span id="redirectUri" class="form-control-readonly">@ClientApp.RedirectUri</span>
+        <label for="redirectUri" class="form-label">Redirect Uri</label><br />
+        <code id="redirectUri" class="form-control-readonly">@ClientApp.RedirectUri</code>
     </div>
     <EditForm Model="Request">
         <DataAnnotationsValidator />
@@ -38,8 +38,7 @@
         </div>
         <div class="mb-3">
             <label for="codeChallenge" class="form-label">Code Challenge</label>
-            <InputText id="codeChallenge" class="form-control" @bind-Value="PkceChallenge.CodeChallenge"
-                disabled="true" />
+            <InputText id="codeChallenge" class="form-control" @bind-Value="PkceChallenge.CodeChallenge" disabled="true" />
         </div>
         <div class="mb-3">
             <label for="authorizeUrl" class="form-label">Authorize URL</label>
