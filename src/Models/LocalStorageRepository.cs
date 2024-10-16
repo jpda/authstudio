@@ -10,6 +10,8 @@ public interface IPersistentSettingsRepository
     public Task<ClientAppModel> SetClientAppModelAsync(ClientAppModel clientAppModel);
     public Task<PkceChallengeModel> GetPkceChallengeModelAsync();
     public Task<PkceChallengeModel> SetPkceChallengeModelAsync(PkceChallengeModel pkceChallengeModel);
+    public Task<AuthorizeParameterModel> GetAuthorizeParameterModelAsync();
+    public Task<AuthorizeParameterModel> SetAuthorizeParameterModelAsync(AuthorizeParameterModel authorizeParameterModel);
 }
 
 public interface ITransientRepository
@@ -52,6 +54,11 @@ public class LocalStoragePersistentSettingsRepository : IPersistentSettingsRepos
         this.localStorageService = localStorageService;
     }
 
+    public async Task<AuthorizeParameterModel> GetAuthorizeParameterModelAsync()
+    {
+        return await localStorageService.GetItemAsync<AuthorizeParameterModel>("AuthorizeParameterModel");
+    }
+
     public async Task<ClientAppModel> GetClientAppModelAsync()
     {
         return await localStorageService.GetItemAsync<ClientAppModel>("ClientAppModel");
@@ -65,6 +72,12 @@ public class LocalStoragePersistentSettingsRepository : IPersistentSettingsRepos
     public async Task<PkceChallengeModel> GetPkceChallengeModelAsync()
     {
         return await localStorageService.GetItemAsync<PkceChallengeModel>("PkceChallengeModel");
+    }
+
+    public async Task<AuthorizeParameterModel> SetAuthorizeParameterModelAsync(AuthorizeParameterModel authorizeParameterModel)
+    {
+        await localStorageService.SetItemAsync("AuthorizeParameterModel", authorizeParameterModel);
+        return authorizeParameterModel;
     }
 
     public async Task<ClientAppModel> SetClientAppModelAsync(ClientAppModel clientAppModel)

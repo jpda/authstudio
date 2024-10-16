@@ -1,5 +1,6 @@
 ﻿@inject NavigationManager NavigationManager
 @inject ITransientRepository TransientRepository
+@inject IPersistentSettingsRepository SettingsRepository
 @inject IJSRuntime JSRuntime
 
 <h2>Request Builder</h2>
@@ -8,23 +9,18 @@
     <div class="mb-3">
         <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label>
         <code id="authorizeEndpoint" class="form-control-readonly">@Issuer.AuthorizeEndpoint</code>
-        <InputText id="authorizeEndpoint" class="form-control" @bind-Value="Request.Issuer.AuthorizeEndpoint"
-            disabled="true" />
     </div>
     <div class="mb-3">
         <label for="clientId" class="form-label">Client Id</label>
         <code id="clientId" class="form-control-readonly">@ClientApp.ClientId</code>
-        @* <InputText id="clientId" class="form-control" @bind-Value="ClientApp.ClientId" /> *@
     </div>
     <div class="mb-3">
         <label for="clientSecret" class="form-label">Client Secret</label>
         <span id="clientSecret" class="form-control-readonly">@ClientApp.ClientSecret</span>
-        @* <InputText id="clientSecret" class="form-control" @bind-Value="ClientApp.ClientSecret" /> *@
     </div>
     <div class="mb-3">
         <label for="redirectUri" class="form-label">Redirect Uri</label>
         <span id="redirectUri" class="form-control-readonly">@ClientApp.RedirectUri</span>
-        @* <InputText id="redirectUri" class="form-control" @bind-Value="ClientApp.RedirectUri" /> *@
     </div>
     <EditForm Model="Request">
         <DataAnnotationsValidator />
@@ -34,11 +30,11 @@
         </div>
         <div class="mb-3">
             <label for="scope" class="form-label">Scope</label>
-            <InputText id="scope" class="form-control" @bind-Value="Request.ScopeParameter" />
+            <InputText id="scope" class="form-control" @bind-Value="Request.AuthorizeParameters.ScopeParameter" />
         </div>
         <div class="mb-3">
             <label for="responseType" class="form-label">Response Type</label>
-            <InputText id="responseType" class="form-control" @bind-Value="Request.ResponseType" />
+            <InputText id="responseType" class="form-control" @bind-Value="Request.AuthorizeParameters.ResponseType" />
         </div>
         <div class="mb-3">
             <label for="codeChallenge" class="form-label">Code Challenge</label>
@@ -62,6 +58,8 @@
     public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
     [Parameter]
     public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
+    [Parameter]
+    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel();
 
     public AuthorizeRequestModel Request { get; set; } = new AuthorizeRequestModel();
 
@@ -75,11 +73,13 @@
         Request.ClientApp = ClientApp;
         Request.Issuer = Issuer;
         Request.PkceChallenge = PkceChallenge;
+        Request.AuthorizeParameters = AuthorizeParameters;
         base.OnParametersSet();
     }
 
     public async void NavigateToAuthorize()
     {
+        await SettingsRepository.SetAuthorizeParameterModelAsync(Request.AuthorizeParameters);
         await TransientRepository.SetAuthorizeRequestModelAsync(Request);
         NavigationManager.NavigateTo(Request.AuthorizeUrl);
     }

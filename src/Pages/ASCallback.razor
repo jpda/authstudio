@@ -76,7 +76,7 @@
             // in theory this should always be valid seeing as we got here *somehow*
             new ("redirect_uri", $"{NavigationManager.BaseUri}code"),
             new ("client_id", OriginalRequest.ClientApp.ClientId),
-            new ("scope", OriginalRequest.ScopeParameter),
+            new ("scope", OriginalRequest.AuthorizeParameters.ScopeParameter),
             // obviously we would never want to do this for real - it completely defeats the purpose of the verifier
             new ("code_verifier", OriginalRequest.PkceChallenge.CodeVerifier)
         };

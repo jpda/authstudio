@@ -8,7 +8,12 @@
 <IssuerInfo @bind-Issuer=@Issuer />
 <PkceChallenge @bind-Pkce=@PkceChallenge />
 <ClientAppInfo @bind-ClientApp=@ClientApp />
-<AuthorizeRequestInfo Issuer=@Issuer PkceChallenge=@PkceChallenge ClientApp=@ClientApp />
+<AuthorizeRequestInfo 
+    Issuer=@Issuer 
+    PkceChallenge=@PkceChallenge 
+    ClientApp=@ClientApp 
+    AuthorizeParameters=@AuthorizeParameters
+/>
 
 @*read about the component binding pattern here:
 //
@@ -26,6 +31,11 @@ https://learn.microsoft.com/en-us/aspnet/core/blazor/components/data-binding?vie
         {
             ClientId = "tokendebugger"
         };
+    
+    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel() {
+        ScopeParameter = "openid profile",
+        ResponseType = "code"
+    };
 
     protected async override Task OnInitializedAsync()
     {
@@ -33,6 +43,7 @@ https://learn.microsoft.com/en-us/aspnet/core/blazor/components/data-binding?vie
         Issuer = await SettingsRepository.GetIssuerModelAsync() ?? Issuer;
         PkceChallenge = await SettingsRepository.GetPkceChallengeModelAsync() ?? PkceChallenge;
         ClientApp = await SettingsRepository.GetClientAppModelAsync() ?? ClientApp;
+        AuthorizeParameters = await SettingsRepository.GetAuthorizeParameterModelAsync() ?? AuthorizeParameters;
         await base.OnInitializedAsync();
     }
 

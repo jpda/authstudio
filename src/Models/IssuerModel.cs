@@ -31,8 +31,12 @@ public class ClientAppModel
     public string ClientId { get; set; } = "";
     public string ClientSecret { get; set; } = "";
     public string RedirectUri { get; set; } = "";
-    public string Scope { get; set; } = "";
+}
 
+public class AuthorizeParameterModel {
+    public List<string> Scopes { get; set; } = new List<string> { "openid", "profile" };
+    public string ScopeParameter { get { return string.Join(' ', Scopes); } set { Scopes.Clear(); Scopes.AddRange(value.Split(' ')); } }
+    public string ResponseType { get; set; } = "code";
 }
 
 public class AuthorizeRequestModel
@@ -42,9 +46,8 @@ public class AuthorizeRequestModel
     public IssuerModel Issuer { get; set; } = new IssuerModel();
     public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
     public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
-    public List<string> Scopes { get; set; } = new List<string> { "openid", "profile" };
-    public string ScopeParameter { get { return string.Join(' ', Scopes); } set { Scopes.Clear(); Scopes.AddRange(value.Split(' ')); } }
-    public string ResponseType { get; set; } = "code";
+    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel();
+
     public string AuthorizeUrl
     {
         get
@@ -53,8 +56,8 @@ public class AuthorizeRequestModel
             {
                 { "client_id", ClientApp.ClientId },
                 { "redirect_uri", ClientApp.RedirectUri },
-                { "response_type", ResponseType },
-                { "scope", ScopeParameter },
+                { "response_type", AuthorizeParameters.ResponseType },
+                { "scope", AuthorizeParameters.ScopeParameter },
                 { "code_challenge", PkceChallenge.CodeChallenge },
                 { "code_challenge_method", PkceChallenge.CodeChallengeMethod.ToString() },
                 { "state", Id }
