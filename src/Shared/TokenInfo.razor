@@ -8,14 +8,14 @@
             <label for="idToken" class="form-label">ID Token</label>
             <InputTextArea id="idToken" class="form-control" @bind-Value="Token.IdToken" />
             <div class="form-text">Inspect with <a href="https://jwt.ms/#id_token=@Token.IdToken"
-                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/?id_token=@Token.IdToken"
+                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/#token=@Token.IdToken"
                     target="tokeninfo">jwt.io</a></div>
         </div>
         <div class="mb-3">
             <label for="accessToken" class="form-label">Access token </label>
             <InputTextArea id="accessToken" class="form-control" @bind-Value="Token.AccessToken" />
             <div class="form-text">Inspect with <a href="https://jwt.ms/#access_token=@Token.AccessToken"
-                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/?access_token=@Token.AccessToken"
+                    target="tokeninfo">jwt.ms</a> or <a href="https://jwt.io/#token=@Token.AccessToken"
                     target="tokeninfo">jwt.io</a></div>
         </div>
         <div class="mb-3">
