@@ -8,6 +8,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddScoped<OAuthBuilderActions>();
 builder.Services.AddScoped<IPersistentSettingsRepository, LocalStoragePersistentSettingsRepository>();
 builder.Services.AddScoped<ITransientRepository, LocalStorageTransientRepository>();
 

@@ -1,43 +1,52 @@
-﻿@using System.Text.Json.Serialization
-@page "/code"
+﻿@page "/code"
 @inject IHttpClientFactory ClientFactory
 @inject NavigationManager NavigationManager
 @inject ITransientRepository TransientRepository
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Callback</PageTitle>
 
-<h1>codeflow and pkce debugger</h1>
+<h1 class="page-title">Token callback</h1>
 
-<div class="mb-3">
-    <h4>issuer</h4>
-    <code>@Issuer</code>
-</div>
-<div class="mb-3">
-    <h4>reqid</h4>
-    <code>@State</code>
-</div>
-<div class="mb-3">
-    <h4>token endpoint</h4>
-    <code>@OriginalRequest.Issuer.TokenEndpoint</code>
-</div>
-<div class="mb-3">
-    <h4>authorization code</h4>
-    <code>@Code</code>
-</div>
-<div class="mb-3">
-    <h4>Raw response</h4>
-        <code>
-        <pre style="word-wrap:anywhere;">
-            @if(!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken)) {
-                @(System.Text.Json.JsonSerializer.Serialize(Tokens, new System.Text.Json.JsonSerializerOptions() { WriteIndented = true }))
+@if (!string.IsNullOrEmpty(Error))
+{
+    <section class="panel">
+        <div class="alert alert-danger alert-sm mb-0" role="alert">
+            <strong>@Error</strong>
+            @if (!string.IsNullOrEmpty(ErrorDescription))
+            {
+                <div>@ErrorDescription</div>
             }
-        </pre>
-    </code>
-</div>
+            @if (!string.IsNullOrEmpty(ErrorUri))
+            {
+                <div><a href="@ErrorUri" target="_blank" rel="noopener">More information</a></div>
+            }
+        </div>
+    </section>
+}
 
-<div class="mb-3">
-    <button class="btn btn-primary" @onclick="RedeemCode">Redeem Code</button>
-</div>
+@if (string.IsNullOrEmpty(Error))
+{
+    <section class="panel">
+        <h2 class="panel-title">Authorization response</h2>
+        <div class="field-grid">
+            <span>Issuer</span><code class="mono">@Issuer</code>
+            <span>State</span><code class="mono">@State</code>
+            <span>Token endpoint</span><code class="mono">@OriginalRequest.Issuer.TokenEndpoint</code>
+            <span>Code</span><code class="mono">@Code</code>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-primary btn-sm" @onclick="RedeemCode" disabled="@string.IsNullOrEmpty(Code)">Redeem code</button>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrEmpty(Response))
+    {
+        <section class="panel mt-2">
+            <h2 class="panel-title">Token response</h2>
+            <pre class="mono url-display mb-0">@Response</pre>
+        </section>
+    }
+}
 
 @if (!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken) ||
 !string.IsNullOrEmpty(Tokens.RefreshToken))
@@ -54,17 +63,40 @@
     [SupplyParameterFromQuery(Name = "state")]
     public string State { get; set; } = "";
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error")]
+    public string Error { get; set; } = "";
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error_description")]
+    public string ErrorDescription { get; set; } = "";
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "error_uri")]
+    public string ErrorUri { get; set; } = "";
+
     public string Issuer { get; set; } = "";
-    public string Token { get; set; } = "";
     public string Response { get; set; } = "";
 
     private AuthorizeRequestModel OriginalRequest = new AuthorizeRequestModel();
 
     public TokenResponseModel Tokens { get; set; } = new TokenResponseModel();
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(State))
+        {
+            OriginalRequest = await TransientRepository.GetAuthorizeRequestModelAsync(State);
+            Issuer = OriginalRequest.Issuer.Issuer;
+        }
+
+        await base.OnInitializedAsync();
+    }
+
     private async Task RedeemCode()
     {
-        if(Response != string.Empty) {
+        if (Response != string.Empty)
+        {
             await SetTokenData(Response);
             return;
         }
@@ -73,11 +105,9 @@
         var data = new List<KeyValuePair<string, string>>() {
             new ("code", Code),
             new ("grant_type", "authorization_code"),
-            // in theory this should always be valid seeing as we got here *somehow*
             new ("redirect_uri", $"{NavigationManager.BaseUri}code"),
             new ("client_id", OriginalRequest.ClientApp.ClientId),
             new ("scope", OriginalRequest.AuthorizeParameters.ScopeParameter),
-            // obviously we would never want to do this for real - it completely defeats the purpose of the verifier
             new ("code_verifier", OriginalRequest.PkceChallenge.CodeVerifier)
         };
         var tokenResponse = await client.PostAsync($"{OriginalRequest.Issuer.TokenEndpoint}", new FormUrlEncodedContent(data));
@@ -95,14 +125,5 @@
             Tokens = token;
             await TransientRepository.DeleteAuthorizeRequestModelAsync(State);
         }
-    }
-
-    protected async override void OnInitialized()
-    {
-        if (!string.IsNullOrEmpty(State))
-        {
-            OriginalRequest = await TransientRepository.GetAuthorizeRequestModelAsync(State);
-        }
-        base.OnInitialized();
     }
 }

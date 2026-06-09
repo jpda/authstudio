@@ -1,0 +1,63 @@
+@inject IJSRuntime JSRuntime
+
+<section class="panel panel-output">
+    <div class="panel-header">
+        <h2 class="panel-title">Authorize URL</h2>
+        <div class="panel-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" title="Copy URL"
+                @onclick="CopyUrl">Copy</button>
+            <button type="button" class="btn btn-primary btn-sm" @onclick="OnAuthorize">Authorize</button>
+        </div>
+    </div>
+
+    @if (string.IsNullOrEmpty(Request.Issuer.AuthorizeEndpoint))
+    {
+        <p class="text-muted panel-hint">Set an authorize endpoint to build the URL.</p>
+    }
+    else
+    {
+        <div class="url-display mono">@Request.AuthorizeUrl</div>
+
+        <h3 class="panel-subtitle">Query parameters</h3>
+        <table class="param-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var param in Request.GetQueryParameters())
+                {
+                    <tr>
+                        <td class="mono param-name">@param.Key</td>
+                        <td class="mono param-value">@param.Value</td>
+                        <td class="param-copy">
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0"
+                                title="Copy value" @onclick="() => CopyValue(param.Value)">⎘</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public AuthorizeRequestModel Request { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public EventCallback OnAuthorize { get; set; }
+
+    private async Task CopyUrl()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Request.AuthorizeUrl);
+    }
+
+    private async Task CopyValue(string value)
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
+    }
+}

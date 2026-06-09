@@ -1,43 +1,57 @@
 ﻿@inject NavigationManager NavigationManager
 @inject IPersistentSettingsRepository SettingsRepository
 
-<h2>Client app</h2>
-<div class="alert alert-secondary mt-4">
-    <EditForm Model="ClientApp" OnSubmit="SubmitForm">
-        <DataAnnotationsValidator />
-        <div class="mb-3">
-            <label for="clientId" class="form-label">Client Id</label>
-            <InputText id="clientId" class="form-control" @bind-Value="ClientApp.ClientId" />
-        </div>
-        <div class="mb-3">
-            <label for="clientSecret" class="form-label">Client Secret</label>
-            <InputText id="clientSecret" class="form-control" @bind-Value="ClientApp.ClientSecret" />
-        </div>
-        <div class="mb-3">
-            <label for="redirectUri" class="form-label">Redirect Uri</label>
-            <InputText id="redirectUri" class="form-control" @bind-Value="ClientApp.RedirectUri" />
-        </div>
-        <button type="submit" class="btn btn-primary">Update client details</button>
-    </EditForm>
-</div>
+<section class="panel">
+    <h2 class="panel-title">Client</h2>
+
+    <p class="panel-hint">
+        CIMD document: <code>@CimdUrl</code>
+    </p>
+
+    <div class="field-grid">
+        <label for="clientId">Client ID</label>
+        <InputText id="clientId" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientId"
+            @bind-Value:after="PersistClientApp" />
+
+        <label for="clientSecret">Client secret</label>
+        <InputText id="clientSecret" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientSecret"
+            @bind-Value:after="PersistClientApp" />
+
+        <label for="redirectUri">Redirect URI</label>
+        <InputText id="redirectUri" class="form-control form-control-sm mono" @bind-Value="ClientApp.RedirectUri"
+            @bind-Value:after="PersistClientApp" />
+    </div>
+</section>
 
 @code {
+    private string CimdUrl => CimdDefaults.GetDocumentUrl(NavigationManager);
+
+    [Parameter]
+    public IssuerModel Issuer { get; set; } = new IssuerModel();
+
     [Parameter]
     public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
 
     [Parameter]
     public EventCallback<ClientAppModel> ClientAppChanged { get; set; }
-    protected async override Task OnInitializedAsync()
+
+    protected override async Task OnInitializedAsync()
     {
-        if (ClientApp.RedirectUri == null || ClientApp.RedirectUri == "")
+        if (string.IsNullOrEmpty(ClientApp.RedirectUri))
         {
-            ClientApp.RedirectUri = NavigationManager.BaseUri + "code";
-            await ClientAppChanged.InvokeAsync(ClientApp);
+            ClientApp.RedirectUri = NavigationManager.ToAbsoluteUri("code").ToString();
         }
+
+        if (CimdDefaults.ShouldDefaultClientId(ClientApp.ClientId, Issuer.ClientIdMetadataDocumentSupported))
+        {
+            ClientApp.ClientId = CimdUrl;
+        }
+
+        await PersistClientApp();
         await base.OnInitializedAsync();
     }
 
-    private async Task SubmitForm()
+    private async Task PersistClientApp()
     {
         await SettingsRepository.SetClientAppModelAsync(ClientApp);
         await ClientAppChanged.InvokeAsync(ClientApp);

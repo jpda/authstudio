@@ -1,73 +1,59 @@
 @using Microsoft.IdentityModel.Protocols.OpenIdConnect
 @inject IPersistentSettingsRepository SettingsRepository
 
-<h2>Issuer</h2>
-<div>
-    <p>
-        Enter your issuer and we'll try to fetch the OpenID Connect configuration from the <code>.well-known</code>
-        endpoint. OpenID Connect Discovery-compliant providers <a
-            href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_blank"> must
-            publish
-        </a> metadata at <code>https://{the issuer value/including/any/path}/.well-known/openid-configuration</code>.
-        Not all do, however (*ahem*), so if you have a different metadata address, enter that instead.
-    </p>
-    <h4>Common issuer values</h4>
-    <ul>
-        <li>Okta has default and custom authorization servers
-            <ul>
-                <li>Default: <code>https://{yourOktaDomain}/oauth2/default</code></li>
-                <li>Custom: <code>https://{yourOktaDomain}/oauth2/{authorizationServerId}</code></li>
-            </ul>
-        </li>
-        <li>Azure AD uses different endpoints for different 'clouds' - e.g., Global, China, US Gov
-            <ul>
-                <li>Commercial/Global:
-                    <code>https://login.microsoftonline.com/{tenant ID or verified domain name}/v2.0</code>
-                </li>
-                <li>AAD Government:
-                    <code>https://login.microsoftonline.us/{tenant ID or verified domain name}/v2.0</code>
-                </li>
-                <li>AAD China: <code>https://login.chinacloudapi.cn/{tenant ID or verified domain name}/v2.0</code></li>
-                <li>AAD B2C:
-                    <code>https://{tenant name}.b2clogin.com/{tenant ID or verified domain name}/B2C_1(A){policy name}/v2.0</code>
-                </li>
-            </ul>
-        </li>
-    </ul>
-</div>
-<div class="alert alert-secondary mt-4">
-    <EditForm Model="Issuer" OnSubmit="SubmitForm">
-        <DataAnnotationsValidator />
-        <div class="mb-3">
-            <label for="issuer" class="form-label">Issuer</label>
-            <InputText id="issuer" class="form-control" @bind-Value="Issuer.Issuer" />
-            <small id="issuerHelp" class="form-text text-muted">Enter an issuer and we'll try to fetch configuration
-                using the <code>.well-known</code> endpoint.</small>
+<section class="panel">
+    <div class="panel-header">
+        <h2 class="panel-title">Issuer</h2>
+        <button type="button" class="cimd-badge @CimdBadgeClass" disabled="@IsFetching"
+            title="@CimdBadgeTitle" @onclick="RefreshDiscoveryAsync">
+            @CimdBadgeLabel
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(FetchError))
+    {
+        <div class="alert alert-danger alert-sm" role="alert">@FetchError</div>
+    }
+
+    <details class="panel-details">
+        <summary>Discovery notes &amp; common issuers</summary>
+        <p class="panel-hint">
+            Fetch OpenID configuration from <code>.well-known/openid-configuration</code>, or paste endpoints manually.
+            <a href="https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig" target="_blank" rel="noopener">Spec</a>
+        </p>
+        <ul class="panel-hint-list">
+            <li>Okta: <code>https://{domain}/oauth2/default</code></li>
+            <li>Azure: <code>https://login.microsoftonline.com/{tenant}/v2.0</code></li>
+        </ul>
+    </details>
+
+    <div class="field-grid">
+        <label for="issuer">Issuer</label>
+        <InputText id="issuer" class="form-control form-control-sm" @bind-Value="Issuer.Issuer"
+            @bind-Value:after="PersistIssuer" />
+
+        <label for="configUri">Configuration URL</label>
+        <div class="input-group input-group-sm">
+            <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="RefreshDiscoveryAsync"
+                disabled="@IsFetching">@FetchText</button>
+            <InputText id="configUri" class="form-control form-control-sm" @bind-Value="Issuer.ConfigurationUri"
+                @bind-Value:after="PersistIssuer" />
         </div>
-        <div class="mb-3">
-            <label for="configUri" class="form-label">Configuration endpoint</label>
-            <div class="input-group">
-                <button class="btn btn-outline-primary" type="button" @onclick="SubmitForm">@FetchText</button>
-                <InputText id="configUri" class="form-control" @bind-Value="Issuer.ConfigurationUri" />
-            </div>
-            <small id="issuerHelp" class="form-text text-muted">Enter the fully-qualified URL to your OpenID
-                Configuration document.</small>
-        </div>
-        <div class="mb-3">
-            <label for="tokenEndpoint" class="form-label">Token endpoint</label>
-            <InputText id="tokenEndpoint" class="form-control" @bind-Value="Issuer.TokenEndpoint" />
-        </div>
-        <div class="mb-3">
-            <label for="authorizeEndpoint" class="form-label">Authorize endpoint</label>
-            <InputText id="authorizeEndpoint" class="form-control" @bind-Value="Issuer.AuthorizeEndpoint" />
-        </div>
-        @* <button type="submit" class="btn btn-primary">Fetch configuration</button> *@
-    </EditForm>
-</div>
+
+        <label for="authorizeEndpoint">Authorize endpoint</label>
+        <InputText id="authorizeEndpoint" class="form-control form-control-sm" @bind-Value="Issuer.AuthorizeEndpoint"
+            @bind-Value:after="PersistIssuer" />
+
+        <label for="tokenEndpoint">Token endpoint</label>
+        <InputText id="tokenEndpoint" class="form-control form-control-sm" @bind-Value="Issuer.TokenEndpoint"
+            @bind-Value:after="PersistIssuer" />
+    </div>
+</section>
 
 @code {
-    private bool FetchActive { get; set; } = false;
-    private string FetchText { get; set; } = "Fetch configuration";
+    private string FetchText { get; set; } = "Fetch";
+    private string? FetchError { get; set; }
+    private bool IsFetching { get; set; }
 
     [Parameter]
     public IssuerModel Issuer { get; set; } = new IssuerModel();
@@ -75,34 +61,68 @@
     [Parameter]
     public EventCallback<IssuerModel> IssuerChanged { get; set; }
 
-    public async Task SubmitForm()
+    private string CimdBadgeLabel => IsFetching ? "CIMD …" : Issuer.ClientIdMetadataDocumentSupported switch
+    {
+        true => "CIMD supported",
+        false => "CIMD not supported",
+        _ => "CIMD unknown"
+    };
+
+    private string CimdBadgeClass => IsFetching ? "cimd-checking" : Issuer.ClientIdMetadataDocumentSupported switch
+    {
+        true => "cimd-yes",
+        false => "cimd-no",
+        _ => "cimd-unknown"
+    };
+
+    private string CimdBadgeTitle => IsFetching
+        ? "Fetching issuer configuration…"
+        : "Click to refresh OpenID configuration and re-check CIMD support (client_id_metadata_document_supported)";
+
+    private async Task RefreshDiscoveryAsync()
     {
         await FetchOpenIdConfiguration();
     }
 
-    protected override async Task OnInitializedAsync()
+    private async Task PersistIssuer()
     {
-        if (!string.IsNullOrEmpty(Issuer.ConfigurationUri) && string.IsNullOrEmpty(Issuer.AuthorizeEndpoint))
-        {
-            //await FetchOpenIdConfiguration();
-        }
-        await base.OnInitializedAsync();
+        await SettingsRepository.SetIssuerModelAsync(Issuer);
+        await IssuerChanged.InvokeAsync(Issuer);
     }
 
     public async Task FetchOpenIdConfiguration()
     {
-        FetchActive = true;
-        FetchText = "Fetching...";
-        var config = await OpenIdConnectConfigurationRetriever.GetAsync(Issuer.ConfigurationUri, CancellationToken.None);
-        Issuer.Issuer = config.Issuer;
-        Issuer.AuthorizeEndpoint = config.AuthorizationEndpoint;
-        Issuer.TokenEndpoint = config.TokenEndpoint;
-        Issuer.UserInfoEndpoint = config.UserInfoEndpoint;
-        Issuer.JwksUri = config.JwksUri;
-        Issuer.IntrospectionEndpoint = config.IntrospectionEndpoint;
-        Issuer.ConfigurationUri = string.Empty;
-        await SettingsRepository.SetIssuerModelAsync(Issuer);
-        await IssuerChanged.InvokeAsync(Issuer);
-        FetchText = "Done";
+        if (string.IsNullOrWhiteSpace(Issuer.ConfigurationUri) && string.IsNullOrWhiteSpace(Issuer.Issuer))
+        {
+            FetchError = "Enter an issuer or configuration URL first.";
+            return;
+        }
+
+        FetchError = null;
+        IsFetching = true;
+        FetchText = "…";
+        try
+        {
+            var config = await OpenIdConnectConfigurationRetriever.GetAsync(Issuer.ConfigurationUri, CancellationToken.None);
+            Issuer.Issuer = config.Issuer;
+            Issuer.AuthorizeEndpoint = config.AuthorizationEndpoint;
+            Issuer.TokenEndpoint = config.TokenEndpoint;
+            Issuer.UserInfoEndpoint = config.UserInfoEndpoint;
+            Issuer.JwksUri = config.JwksUri;
+            Issuer.IntrospectionEndpoint = config.IntrospectionEndpoint;
+            Issuer.ClientIdMetadataDocumentSupported = CimdDefaults.TryReadMetadataDocumentSupport(config.AdditionalData);
+            Issuer.ConfigurationUri = string.Empty;
+            await SettingsRepository.SetIssuerModelAsync(Issuer);
+            await IssuerChanged.InvokeAsync(Issuer);
+        }
+        catch (Exception ex)
+        {
+            FetchError = ex.Message;
+        }
+        finally
+        {
+            IsFetching = false;
+            FetchText = "Fetch";
+        }
     }
 }

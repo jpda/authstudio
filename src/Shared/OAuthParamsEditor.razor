@@ -1,0 +1,34 @@
+@inject IPersistentSettingsRepository SettingsRepository
+
+<section class="panel">
+    <h2 class="panel-title">Request parameters</h2>
+    <div class="field-grid">
+        <label for="requestState">State</label>
+        <input id="requestState" class="form-control form-control-sm mono" readonly value="@RequestId" />
+
+        <label for="scope">Scope</label>
+        <InputText id="scope" class="form-control form-control-sm" @bind-Value="AuthorizeParameters.ScopeParameter"
+            @bind-Value:after="PersistAuthorizeParameters" />
+
+        <label for="responseType">Response type</label>
+        <InputText id="responseType" class="form-control form-control-sm"
+            @bind-Value="AuthorizeParameters.ResponseType" @bind-Value:after="PersistAuthorizeParameters" />
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string RequestId { get; set; } = "";
+
+    [Parameter, EditorRequired]
+    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new();
+
+    [Parameter]
+    public EventCallback AuthorizeParametersChanged { get; set; }
+
+    private async Task PersistAuthorizeParameters()
+    {
+        await SettingsRepository.SetAuthorizeParameterModelAsync(AuthorizeParameters);
+        await AuthorizeParametersChanged.InvokeAsync();
+    }
+}

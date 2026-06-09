@@ -1,0 +1,18 @@
+{
+    "client_id": "https://localhost:5103/local.json",
+    "client_name": "OAuth Studio",
+    "client_uri": "https://oauth.studio",
+    "redirect_uris": [
+        "https://localhost:5103/code"
+    ],
+    "grant_types": [
+        "authorization_code"
+    ],
+    "response_types": [
+        "code"
+    ],
+    "token_endpoint_auth_method": "none",
+    "tos_uri": "https://jpda.dev/privacy-policy",
+    "policy_uri": "https://jpda.dev/privacy-policy",
+    "logo_uri": "https://oauth.studio/icon-192.png"
+}

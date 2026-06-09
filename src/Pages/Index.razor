@@ -1,50 +1,102 @@
 ﻿@page "/"
 @inject IPersistentSettingsRepository SettingsRepository
+@inject ITransientRepository TransientRepository
+@inject NavigationManager NavigationManager
+@inject OAuthBuilderActions BuilderActions
+@implements IDisposable
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Builder</PageTitle>
 
-<h1>codeflow and pkce debugger</h1>
-
-<IssuerInfo @bind-Issuer=@Issuer />
-<PkceChallenge @bind-Pkce=@PkceChallenge />
-<ClientAppInfo @bind-ClientApp=@ClientApp />
-<AuthorizeRequestInfo 
-    Issuer=@Issuer 
-    PkceChallenge=@PkceChallenge 
-    ClientApp=@ClientApp 
-    AuthorizeParameters=@AuthorizeParameters
-/>
-
-@*read about the component binding pattern here:
-//
-https://learn.microsoft.com/en-us/aspnet/core/blazor/components/data-binding?view=aspnetcore-7.0#binding-with-component-parameters
-*@
+<div class="builder-grid">
+    <div class="builder-config">
+        <IssuerInfo Issuer="Issuer" IssuerChanged="HandleIssuerChanged" />
+        <ClientAppInfo Issuer="Issuer" ClientApp="ClientApp" ClientAppChanged="HandleClientAppChanged" />
+        <PkceChallenge @bind-Pkce="PkceChallenge" />
+        <OAuthParamsEditor RequestId="@RequestId" AuthorizeParameters="AuthorizeParameters"
+            AuthorizeParametersChanged="StateHasChanged" />
+    </div>
+    <div class="builder-output">
+        <AuthorizeUrlPanel Request="CurrentRequest" OnAuthorize="StartAuthorizeAsync" />
+    </div>
+</div>
 
 @code {
     public IssuerModel Issuer { get; set; } = new IssuerModel()
-        {
-            Issuer = "https://login.sck.sh",
-        };
+    {
+        Issuer = "https://login.sck.sh",
+    };
     public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
-
-    public ClientAppModel ClientApp = new ClientAppModel()
-        {
-            ClientId = "tokendebugger"
-        };
-    
-    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel() {
+    public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
+    public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel()
+    {
         ScopeParameter = "openid profile",
         ResponseType = "code"
     };
 
-    protected async override Task OnInitializedAsync()
+    private string RequestId { get; set; } = Guid.NewGuid().ToString("N");
+
+    private AuthorizeRequestModel CurrentRequest => new()
     {
-        // fetch original details if any exist
+        Id = RequestId,
+        Issuer = Issuer,
+        ClientApp = ClientApp,
+        PkceChallenge = PkceChallenge,
+        AuthorizeParameters = AuthorizeParameters
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
         Issuer = await SettingsRepository.GetIssuerModelAsync() ?? Issuer;
         PkceChallenge = await SettingsRepository.GetPkceChallengeModelAsync() ?? PkceChallenge;
         ClientApp = await SettingsRepository.GetClientAppModelAsync() ?? ClientApp;
         AuthorizeParameters = await SettingsRepository.GetAuthorizeParameterModelAsync() ?? AuthorizeParameters;
+
+        await ApplyCimdClientIdIfNeeded();
+
+        BuilderActions.IsBuilderActive = true;
+        BuilderActions.AuthorizeAsync = StartAuthorizeAsync;
+
         await base.OnInitializedAsync();
     }
 
+    private async Task HandleIssuerChanged(IssuerModel issuer)
+    {
+        Issuer = issuer;
+        await ApplyCimdClientIdIfNeeded();
+    }
+
+    private Task HandleClientAppChanged(ClientAppModel clientApp)
+    {
+        ClientApp = clientApp;
+        return Task.CompletedTask;
+    }
+
+    private async Task ApplyCimdClientIdIfNeeded()
+    {
+        if (!CimdDefaults.ShouldDefaultClientId(ClientApp.ClientId, Issuer.ClientIdMetadataDocumentSupported))
+        {
+            return;
+        }
+
+        ClientApp.ClientId = CimdDefaults.GetDocumentUrl(NavigationManager);
+        await SettingsRepository.SetClientAppModelAsync(ClientApp);
+    }
+
+    private async Task StartAuthorizeAsync()
+    {
+        PkceChallenge.GenerateChallenge();
+        await SettingsRepository.SetPkceChallengeModelAsync(PkceChallenge);
+        RequestId = Guid.NewGuid().ToString("N");
+
+        var request = CurrentRequest;
+        await SettingsRepository.SetAuthorizeParameterModelAsync(AuthorizeParameters);
+        await TransientRepository.SetAuthorizeRequestModelAsync(request);
+        NavigationManager.NavigateTo(request.AuthorizeUrl);
+    }
+
+    public void Dispose()
+    {
+        BuilderActions.IsBuilderActive = false;
+        BuilderActions.AuthorizeAsync = null;
+    }
 }

@@ -1,0 +1,29 @@
+@inject OAuthBuilderActions BuilderActions
+@inject NavigationManager NavigationManager
+
+<header class="app-header">
+    <div class="app-header-brand">
+        <NavLink href="" Match="NavLinkMatch.All" class="app-header-title">authstudio</NavLink>
+        <span class="app-header-tagline">OAuth2 + PKCE debugger</span>
+    </div>
+    <nav class="app-header-nav">
+        <NavLink href="" Match="NavLinkMatch.All" class="app-header-link">Builder</NavLink>
+        <NavLink href="code" class="app-header-link">Callback</NavLink>
+    </nav>
+    <div class="app-header-actions">
+        @if (BuilderActions.IsBuilderActive && BuilderActions.AuthorizeAsync is not null)
+        {
+            <button type="button" class="btn btn-primary btn-sm" @onclick="LaunchAuthorize">Authorize</button>
+        }
+    </div>
+</header>
+
+@code {
+    private async Task LaunchAuthorize()
+    {
+        if (BuilderActions.AuthorizeAsync is not null)
+        {
+            await BuilderActions.AuthorizeAsync();
+        }
+    }
+}

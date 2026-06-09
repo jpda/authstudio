@@ -24,6 +24,8 @@ public class IssuerModel
     private string _configurationUri = "";
     public string ConfigurationUri { get { return string.IsNullOrEmpty(_configurationUri) ? AutoConfigurationUri : _configurationUri; } set { _configurationUri = value; } }
 
+    public bool? ClientIdMetadataDocumentSupported { get; set; }
+
 }
 
 public class ClientAppModel
@@ -52,6 +54,11 @@ public class AuthorizeRequestModel
     {
         get
         {
+            if (string.IsNullOrEmpty(Issuer.AuthorizeEndpoint))
+            {
+                return "";
+            }
+
             var authorizeParameters = new Dictionary<string, string?>
             {
                 { "client_id", ClientApp.ClientId },
@@ -65,6 +72,19 @@ public class AuthorizeRequestModel
             return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Issuer.AuthorizeEndpoint, authorizeParameters);
         }
         set { }
+    }
+
+    public IReadOnlyList<KeyValuePair<string, string>> GetQueryParameters()
+    {
+        if (string.IsNullOrEmpty(AuthorizeUrl))
+        {
+            return Array.Empty<KeyValuePair<string, string>>();
+        }
+
+        var query = new Uri(AuthorizeUrl).Query;
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(query)
+            .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value ?? "")))
+            .ToList();
     }
 }
 
