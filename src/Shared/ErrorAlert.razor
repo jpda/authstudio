@@ -1,0 +1,45 @@
+<section class="panel">
+    <div class="alert @AlertClass alert-sm mb-0" role="alert">
+        @if (!string.IsNullOrEmpty(Title))
+        {
+            <strong>@Title</strong>
+        }
+        @if (!string.IsNullOrEmpty(Message))
+        {
+            <div>@Message</div>
+        }
+        @if (!string.IsNullOrEmpty(Detail))
+        {
+            <pre class="mono error-detail mb-0 mt-1">@Detail</pre>
+        }
+        @if (!string.IsNullOrEmpty(MoreInfoUri))
+        {
+            <div class="mt-1">
+                <a href="@MoreInfoUri" target="_blank" rel="noopener">More information</a>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public string? Detail { get; set; }
+
+    [Parameter]
+    public string? MoreInfoUri { get; set; }
+
+    [Parameter]
+    public string Variant { get; set; } = "danger";
+
+    private string AlertClass => Variant switch
+    {
+        "warning" => "alert-warning",
+        _ => "alert-danger"
+    };
+}

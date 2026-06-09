@@ -1,0 +1,10 @@
+{
+  "kty": "EC",
+  "crv": "P-256",
+  "kid": "authstudio-demo-1",
+  "use": "sig",
+  "alg": "ES256",
+  "x": "nEE_4t0QdB-60iaNbK7YomLYBULP33Fl3zUDh4wwJmQ",
+  "y": "k-EPSloZOb5Qja_HiR1v4hU2stZam5-vHLF7tP4D5xw",
+  "d": "VdtKaa2QB9oUwgVfIEfQSWPBG0q7X4HxaR_pcBzxyw0"
+}

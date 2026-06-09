@@ -2,6 +2,7 @@
 @inject IHttpClientFactory ClientFactory
 @inject NavigationManager NavigationManager
 @inject ITransientRepository TransientRepository
+@inject ClientAssertionService ClientAssertionService
 
 <PageTitle>Callback</PageTitle>
 
@@ -9,19 +10,12 @@
 
 @if (!string.IsNullOrEmpty(Error))
 {
-    <section class="panel">
-        <div class="alert alert-danger alert-sm mb-0" role="alert">
-            <strong>@Error</strong>
-            @if (!string.IsNullOrEmpty(ErrorDescription))
-            {
-                <div>@ErrorDescription</div>
-            }
-            @if (!string.IsNullOrEmpty(ErrorUri))
-            {
-                <div><a href="@ErrorUri" target="_blank" rel="noopener">More information</a></div>
-            }
-        </div>
-    </section>
+    <ErrorAlert Title="@Error" Message="@ErrorDescription" MoreInfoUri="@ErrorUri" />
+}
+
+@if (!string.IsNullOrEmpty(LoadError))
+{
+    <ErrorAlert Title="Could not restore authorization request" Message="@LoadError" Variant="warning" />
 }
 
 @if (string.IsNullOrEmpty(Error))
@@ -31,18 +25,34 @@
         <div class="field-grid">
             <span>Issuer</span><code class="mono">@Issuer</code>
             <span>State</span><code class="mono">@State</code>
+            <span>Client ID</span><code class="mono">@OriginalRequest.ClientApp.ClientId</code>
             <span>Token endpoint</span><code class="mono">@OriginalRequest.Issuer.TokenEndpoint</code>
+            <span>Redirect URI</span><code class="mono">@OriginalRequest.ClientApp.RedirectUri</code>
+            <span>Token auth</span><code class="mono">@OriginalRequest.ClientApp.TokenAuthMethod</code>
+            @if (OriginalRequest.ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
+            {
+                <span>Signing alg</span><code class="mono">@OriginalRequest.ClientApp.SigningAlgorithm</code>
+            }
             <span>Code</span><code class="mono">@Code</code>
         </div>
         <div class="mt-2">
-            <button class="btn btn-primary btn-sm" @onclick="RedeemCode" disabled="@string.IsNullOrEmpty(Code)">Redeem code</button>
+            <button class="btn btn-primary btn-sm" @onclick="RedeemCode"
+                disabled="@(string.IsNullOrEmpty(Code) || IsRedeeming || !string.IsNullOrEmpty(LoadError))">
+                @(IsRedeeming ? "Redeeming…" : "Redeem code")
+            </button>
         </div>
     </section>
+
+    @if (!string.IsNullOrEmpty(RedeemError))
+    {
+        <ErrorAlert Title="@RedeemError" Message="@RedeemErrorDescription" Detail="@RedeemErrorDetail"
+            MoreInfoUri="@RedeemErrorUri" />
+    }
 
     @if (!string.IsNullOrEmpty(Response))
     {
         <section class="panel mt-2">
-            <h2 class="panel-title">Token response</h2>
+            <h2 class="panel-title">Token response @(TokenStatusCode > 0 ? $"({TokenStatusCode})" : "")</h2>
             <pre class="mono url-display mb-0">@Response</pre>
         </section>
     }
@@ -77,17 +87,36 @@
 
     public string Issuer { get; set; } = "";
     public string Response { get; set; } = "";
+    public string? LoadError { get; set; }
+    public string? RedeemError { get; set; }
+    public string? RedeemErrorDescription { get; set; }
+    public string? RedeemErrorDetail { get; set; }
+    public string? RedeemErrorUri { get; set; }
+    public int TokenStatusCode { get; set; }
+    public bool IsRedeeming { get; set; }
 
     private AuthorizeRequestModel OriginalRequest = new AuthorizeRequestModel();
-
     public TokenResponseModel Tokens { get; set; } = new TokenResponseModel();
 
     protected override async Task OnInitializedAsync()
     {
-        if (!string.IsNullOrEmpty(State))
+        if (string.IsNullOrEmpty(State))
+        {
+            LoadError = "No state parameter was provided. Start a new authorize request from the builder.";
+        }
+        else
         {
             OriginalRequest = await TransientRepository.GetAuthorizeRequestModelAsync(State);
-            Issuer = OriginalRequest.Issuer.Issuer;
+            if (string.IsNullOrEmpty(OriginalRequest.Issuer.AuthorizeEndpoint)
+                && string.IsNullOrEmpty(OriginalRequest.Issuer.TokenEndpoint)
+                && string.IsNullOrEmpty(OriginalRequest.ClientApp.ClientId))
+            {
+                LoadError = $"No saved request found for state '{State}'. It may have expired or already been redeemed.";
+            }
+            else
+            {
+                Issuer = OriginalRequest.Issuer.Issuer;
+            }
         }
 
         await base.OnInitializedAsync();
@@ -95,35 +124,79 @@
 
     private async Task RedeemCode()
     {
-        if (Response != string.Empty)
+        if (IsRedeeming)
         {
-            await SetTokenData(Response);
             return;
         }
 
-        var client = ClientFactory.CreateClient("AuthClient");
-        var data = new List<KeyValuePair<string, string>>() {
-            new ("code", Code),
-            new ("grant_type", "authorization_code"),
-            new ("redirect_uri", $"{NavigationManager.BaseUri}code"),
-            new ("client_id", OriginalRequest.ClientApp.ClientId),
-            new ("scope", OriginalRequest.AuthorizeParameters.ScopeParameter),
-            new ("code_verifier", OriginalRequest.PkceChallenge.CodeVerifier)
-        };
-        var tokenResponse = await client.PostAsync($"{OriginalRequest.Issuer.TokenEndpoint}", new FormUrlEncodedContent(data));
-        var rawResponse = await tokenResponse.Content.ReadAsStringAsync();
-        await SetTokenData(rawResponse);
-    }
+        RedeemError = null;
+        RedeemErrorDescription = null;
+        RedeemErrorDetail = null;
+        RedeemErrorUri = null;
+        IsRedeeming = true;
 
-    private async Task SetTokenData(string rawResponse)
-    {
-        Response = rawResponse;
-        var token = System.Text.Json.JsonSerializer.Deserialize<TokenResponseModel>(Response);
-
-        if (token != null)
+        try
         {
-            Tokens = token;
+            if (string.IsNullOrEmpty(OriginalRequest.Issuer.TokenEndpoint))
+            {
+                RedeemError = "token_endpoint_missing";
+                RedeemErrorDescription = "The saved request does not include a token endpoint.";
+                return;
+            }
+
+            var client = ClientFactory.CreateClient("AuthClient");
+            string? clientAssertion = null;
+            if (OriginalRequest.ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
+            {
+                if (string.IsNullOrWhiteSpace(OriginalRequest.ClientApp.SigningPrivateKeyJwk))
+                {
+                    RedeemError = "missing_signing_key";
+                    RedeemErrorDescription = "private_key_jwt requires a private JWK on the saved client configuration.";
+                    return;
+                }
+
+                clientAssertion = await ClientAssertionService.CreateAssertionAsync(
+                    OriginalRequest.ClientApp.ClientId,
+                    OriginalRequest.Issuer.TokenEndpoint,
+                    OriginalRequest.ClientApp.SigningPrivateKeyJwk,
+                    OriginalRequest.ClientApp.SigningAlgorithm);
+            }
+
+            using var request = TokenEndpointClient.BuildTokenRequest(
+                OriginalRequest.Issuer.TokenEndpoint,
+                OriginalRequest.ClientApp,
+                OriginalRequest.AuthorizeParameters,
+                OriginalRequest.PkceChallenge,
+                Code,
+                clientAssertion);
+
+            using var tokenResponse = await client.SendAsync(request);
+            var rawResponse = await tokenResponse.Content.ReadAsStringAsync();
+            var result = TokenEndpointClient.ParseResponse(tokenResponse, rawResponse);
+
+            Response = result.RawBody;
+            TokenStatusCode = result.StatusCode;
+
+            if (!result.IsSuccess)
+            {
+                RedeemError = result.Error;
+                RedeemErrorDescription = result.ErrorDescription;
+                RedeemErrorUri = result.ErrorUri;
+                RedeemErrorDetail = rawResponse;
+                return;
+            }
+
+            Tokens = result.Tokens ?? new TokenResponseModel();
             await TransientRepository.DeleteAuthorizeRequestModelAsync(State);
+        }
+        catch (Exception ex)
+        {
+            RedeemError = "token_request_failed";
+            RedeemErrorDescription = ex.Message;
+        }
+        finally
+        {
+            IsRedeeming = false;
         }
     }
 }

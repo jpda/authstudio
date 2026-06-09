@@ -33,6 +33,9 @@ public class ClientAppModel
     public string ClientId { get; set; } = "";
     public string ClientSecret { get; set; } = "";
     public string RedirectUri { get; set; } = "";
+    public TokenClientAuthMethod TokenAuthMethod { get; set; } = TokenClientAuthMethod.None;
+    public string SigningPrivateKeyJwk { get; set; } = "";
+    public string SigningAlgorithm { get; set; } = "ES256";
 }
 
 public class AuthorizeParameterModel {

@@ -1,11 +1,19 @@
 ﻿@inject NavigationManager NavigationManager
 @inject IPersistentSettingsRepository SettingsRepository
+@inject HttpClient Http
 
 <section class="panel">
-    <h2 class="panel-title">Client</h2>
+    <div class="panel-header">
+        <h2 class="panel-title">Client</h2>
+        <div class="panel-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePublicClientCimd">Public CIMD</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePrivateClientCimd">Private CIMD</button>
+        </div>
+    </div>
 
     <p class="panel-hint">
-        CIMD document: <code>@CimdUrl</code>
+        Public CIMD: <code>@PublicCimdUrl</code><br />
+        Private CIMD: <code>@PrivateCimdUrl</code> · JWKS: <a href="@JwksUrl" target="_blank" rel="noopener">jwks.json</a>
     </p>
 
     <div class="field-grid">
@@ -15,7 +23,38 @@
 
         <label for="clientSecret">Client secret</label>
         <InputText id="clientSecret" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientSecret"
-            @bind-Value:after="PersistClientApp" />
+            @bind-Value:after="OnClientSecretChanged" />
+
+        <label for="tokenAuthMethod">Token auth</label>
+        <InputSelect id="tokenAuthMethod" class="form-select form-select-sm" @bind-Value="ClientApp.TokenAuthMethod"
+            @bind-Value:after="OnTokenAuthMethodChanged">
+            <option value="@TokenClientAuthMethod.None">None (public / PKCE)</option>
+            <option value="@TokenClientAuthMethod.ClientSecretPost">Client secret (POST body)</option>
+            <option value="@TokenClientAuthMethod.ClientSecretBasic">Client secret (Basic header)</option>
+            <option value="@TokenClientAuthMethod.PrivateKeyJwt">private_key_jwt</option>
+        </InputSelect>
+
+        @if (ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
+        {
+            <label for="signingAlgorithm">Signing alg</label>
+            <InputSelect id="signingAlgorithm" class="form-select form-select-sm" @bind-Value="ClientApp.SigningAlgorithm"
+                @bind-Value:after="PersistClientApp">
+                <option value="ES256">ES256</option>
+                <option value="RS256">RS256</option>
+            </InputSelect>
+
+            <label for="signingKey">Private JWK</label>
+            <div>
+                <textarea id="signingKey" class="form-control form-control-sm mono assertion-key-input" rows="5"
+                    @bind="ClientApp.SigningPrivateKeyJwk" @bind:after="PersistClientApp"></textarea>
+                <div class="panel-actions mt-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadIllustrativeSigningKey">
+                        Load illustrative key
+                    </button>
+                    <a class="btn btn-outline-secondary btn-sm" href="assertion">Assertion generator</a>
+                </div>
+            </div>
+        }
 
         <label for="redirectUri">Redirect URI</label>
         <InputText id="redirectUri" class="form-control form-control-sm mono" @bind-Value="ClientApp.RedirectUri"
@@ -24,7 +63,9 @@
 </section>
 
 @code {
-    private string CimdUrl => CimdDefaults.GetDocumentUrl(NavigationManager);
+    private string PublicCimdUrl => CimdDefaults.GetDocumentUrl(NavigationManager);
+    private string PrivateCimdUrl => CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+    private string JwksUrl => CimdDefaults.GetJwksDocumentUrl(NavigationManager);
 
     [Parameter]
     public IssuerModel Issuer { get; set; } = new IssuerModel();
@@ -44,11 +85,70 @@
 
         if (CimdDefaults.ShouldDefaultClientId(ClientApp.ClientId, Issuer.ClientIdMetadataDocumentSupported))
         {
-            ClientApp.ClientId = CimdUrl;
+            ClientApp.ClientId = PublicCimdUrl;
         }
 
         await PersistClientApp();
         await base.OnInitializedAsync();
+    }
+
+    private async Task UsePublicClientCimd()
+    {
+        ClientApp.ClientId = PublicCimdUrl;
+        if (ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
+        {
+            ClientApp.TokenAuthMethod = TokenClientAuthMethod.None;
+            ClientApp.SigningPrivateKeyJwk = "";
+        }
+        await PersistClientApp();
+    }
+
+    private async Task UsePrivateClientCimd()
+    {
+        ClientApp.ClientId = PrivateCimdUrl;
+        ClientApp.TokenAuthMethod = TokenClientAuthMethod.PrivateKeyJwt;
+        ClientApp.SigningAlgorithm = "ES256";
+        ClientApp.ClientSecret = "";
+        if (string.IsNullOrWhiteSpace(ClientApp.SigningPrivateKeyJwk))
+        {
+            await LoadIllustrativeSigningKey();
+        }
+        await PersistClientApp();
+    }
+
+    private async Task LoadIllustrativeSigningKey()
+    {
+        ClientApp.SigningPrivateKeyJwk = await Http.GetStringAsync(CimdDefaults.GetSigningKeyDocumentUrl(NavigationManager));
+        ClientApp.SigningAlgorithm = "ES256";
+        await PersistClientApp();
+    }
+
+    private async Task OnClientSecretChanged()
+    {
+        if (!string.IsNullOrEmpty(ClientApp.ClientSecret) && ClientApp.TokenAuthMethod == TokenClientAuthMethod.None)
+        {
+            ClientApp.TokenAuthMethod = TokenClientAuthMethod.ClientSecretPost;
+        }
+
+        if (string.IsNullOrEmpty(ClientApp.ClientSecret)
+            && ClientApp.TokenAuthMethod is TokenClientAuthMethod.ClientSecretPost or TokenClientAuthMethod.ClientSecretBasic)
+        {
+            ClientApp.TokenAuthMethod = TokenClientAuthMethod.None;
+        }
+
+        await PersistClientApp();
+    }
+
+    private async Task OnTokenAuthMethodChanged()
+    {
+        if (ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt
+            && string.IsNullOrWhiteSpace(ClientApp.SigningPrivateKeyJwk))
+        {
+            await LoadIllustrativeSigningKey();
+            return;
+        }
+
+        await PersistClientApp();
     }
 
     private async Task PersistClientApp()

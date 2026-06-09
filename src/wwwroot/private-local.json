@@ -1,0 +1,20 @@
+{
+  "client_id": "http://localhost:5002/private-local.json",
+  "client_name": "OAuth Studio (private_key_jwt, local)",
+  "client_uri": "https://oauth.studio",
+  "redirect_uris": [
+    "http://localhost:5002/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "token_endpoint_auth_signing_alg": "ES256",
+  "jwks_uri": "http://localhost:5002/jwks.json",
+  "tos_uri": "https://jpda.dev/privacy-policy",
+  "policy_uri": "https://jpda.dev/privacy-policy",
+  "logo_uri": "https://oauth.studio/icon-192.png"
+}

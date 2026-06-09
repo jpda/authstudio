@@ -1,0 +1,174 @@
+@page "/assertion"
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject ClientAssertionService ClientAssertionService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Client assertion</PageTitle>
+
+<h1 class="page-title">private_key_jwt assertion generator</h1>
+
+<p class="panel-hint">
+    Signs a client assertion entirely in the browser via Web Crypto. Private keys never leave this page except when you copy the JWT.
+    Illustrative public keys live at <a href="@JwksUrl" target="_blank" rel="noopener">jwks.json</a>.
+</p>
+
+<div class="builder-grid">
+    <section class="panel">
+        <h2 class="panel-title">Inputs</h2>
+        <div class="field-grid">
+            <label for="clientId">Client ID (iss/sub)</label>
+            <InputText id="clientId" class="form-control form-control-sm mono" @bind-Value="ClientId" />
+
+            <label for="audience">Audience (aud)</label>
+            <InputText id="audience" class="form-control form-control-sm mono" @bind-Value="Audience"
+                placeholder="Token endpoint URL" />
+
+            <label for="algorithm">Algorithm</label>
+            <InputSelect id="algorithm" class="form-select form-select-sm" @bind-Value="Algorithm">
+                <option value="ES256">ES256 (EC P-256)</option>
+                <option value="RS256">RS256 (RSA)</option>
+            </InputSelect>
+
+            <label for="lifetime">Lifetime (sec)</label>
+            <InputNumber id="lifetime" class="form-control form-control-sm" @bind-Value="LifetimeSeconds" />
+        </div>
+
+        <label for="privateKey" class="form-label mt-2">Private JWK</label>
+        <textarea id="privateKey" class="form-control form-control-sm mono assertion-key-input" rows="8"
+            @bind="PrivateKeyJwk"></textarea>
+
+        <div class="panel-actions mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadIllustrativeKey">
+                Load illustrative key
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePrivateClientDefaults">
+                Use private client defaults
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" @onclick="GenerateAssertion">
+                Generate assertion
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(GeneratorError))
+        {
+            <div class="alert alert-danger alert-sm mt-2 mb-0">@GeneratorError</div>
+        }
+    </section>
+
+    <section class="panel panel-output">
+        <div class="panel-header">
+            <h2 class="panel-title">Client assertion</h2>
+            @if (!string.IsNullOrEmpty(Assertion))
+            {
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyAssertion">Copy JWT</button>
+            }
+        </div>
+
+        @if (string.IsNullOrEmpty(Assertion))
+        {
+            <p class="panel-hint mb-0">Generate an assertion to inspect the JWT and copy it into token requests.</p>
+        }
+        else
+        {
+            <div class="url-display mono mb-2">@Assertion</div>
+            <p class="panel-hint mb-1">
+                <code>client_assertion_type</code>:
+                <span class="mono">@PrivateKeyJwtGenerator.ClientAssertionType</span>
+            </p>
+
+            <h3 class="panel-subtitle">Header</h3>
+            <pre class="mono url-display">@DecodedHeader</pre>
+
+            <h3 class="panel-subtitle">Payload</h3>
+            <pre class="mono url-display mb-0">@DecodedPayload</pre>
+        }
+    </section>
+</div>
+
+@code {
+    private string ClientId { get; set; } = "";
+    private string Audience { get; set; } = "";
+    private string Algorithm { get; set; } = "ES256";
+    private int LifetimeSeconds { get; set; } = 300;
+    private string PrivateKeyJwk { get; set; } = "";
+    private string Assertion { get; set; } = "";
+    private string DecodedHeader { get; set; } = "";
+    private string DecodedPayload { get; set; } = "";
+    private string? GeneratorError { get; set; }
+
+    private string JwksUrl => CimdDefaults.GetJwksDocumentUrl(NavigationManager);
+
+    protected override void OnInitialized()
+    {
+        ClientId = CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+    }
+
+    private async Task LoadIllustrativeKey()
+    {
+        GeneratorError = null;
+        try
+        {
+            PrivateKeyJwk = await Http.GetStringAsync(CimdDefaults.GetSigningKeyDocumentUrl(NavigationManager));
+            Algorithm = "ES256";
+        }
+        catch (Exception ex)
+        {
+            GeneratorError = ex.Message;
+        }
+    }
+
+    private void UsePrivateClientDefaults()
+    {
+        ClientId = CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+        Audience = "";
+    }
+
+    private async Task GenerateAssertion()
+    {
+        GeneratorError = null;
+        Assertion = "";
+        DecodedHeader = "";
+        DecodedPayload = "";
+
+        if (string.IsNullOrWhiteSpace(ClientId))
+        {
+            GeneratorError = "Client ID is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Audience))
+        {
+            GeneratorError = "Audience (usually the token endpoint URL) is required.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(PrivateKeyJwk))
+        {
+            GeneratorError = "Private JWK is required.";
+            return;
+        }
+
+        try
+        {
+            Assertion = await ClientAssertionService.CreateAssertionAsync(
+                ClientId,
+                Audience,
+                PrivateKeyJwk,
+                Algorithm,
+                LifetimeSeconds);
+            var decoded = JwtDecoder.Decode(Assertion);
+            DecodedHeader = decoded.Header;
+            DecodedPayload = decoded.Payload;
+        }
+        catch (Exception ex)
+        {
+            GeneratorError = ex.Message;
+        }
+    }
+
+    private async Task CopyAssertion()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Assertion);
+    }
+}

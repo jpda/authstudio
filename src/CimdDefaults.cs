@@ -9,9 +9,29 @@ public static class CimdDefaults
         return IsLocalHost(baseUri) ? "local.json" : "client.json";
     }
 
+    public static string GetPrivateClientDocumentPath(Uri baseUri)
+    {
+        return IsLocalHost(baseUri) ? "private-local.json" : "private-client.json";
+    }
+
     public static string GetDocumentUrl(NavigationManager navigationManager)
     {
         return navigationManager.ToAbsoluteUri(GetDocumentPath(new Uri(navigationManager.BaseUri))).ToString();
+    }
+
+    public static string GetPrivateClientDocumentUrl(NavigationManager navigationManager)
+    {
+        return navigationManager.ToAbsoluteUri(GetPrivateClientDocumentPath(new Uri(navigationManager.BaseUri))).ToString();
+    }
+
+    public static string GetJwksDocumentUrl(NavigationManager navigationManager)
+    {
+        return navigationManager.ToAbsoluteUri("jwks.json").ToString();
+    }
+
+    public static string GetSigningKeyDocumentUrl(NavigationManager navigationManager)
+    {
+        return navigationManager.ToAbsoluteUri("signing-key.json").ToString();
     }
 
     public static bool ShouldDefaultClientId(string? clientId, bool? issuerSupportsCimd)

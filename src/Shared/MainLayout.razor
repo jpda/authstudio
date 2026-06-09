@@ -3,6 +3,14 @@
 <div class="app-shell">
     <AppHeader />
     <main class="app-main">
-        @Body
+        <ErrorBoundary>
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent Context="exception">
+                <ErrorAlert Title="Something went wrong" Message="@exception.Message"
+                    Detail="@exception.StackTrace" Variant="danger" />
+            </ErrorContent>
+        </ErrorBoundary>
     </main>
 </div>
