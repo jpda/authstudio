@@ -1,41 +1,30 @@
 using System.Security.Cryptography;
 using System.Text;
+
 namespace authstudio;
 
 public static class PkcePairGenerator
 {
-  // see https://dotnetfiddle.net/8jxMYZ
-    public const string VERIFIER_CODE_CHARACTERS = "ABCDEFGHIJKLMNOPQURSTWXYZabcdefghijklmnopqurstwxyz0123456789-._~";
+    public const string VerifierCodeCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
 
     public static string GenerateVerifier(int codeLength = 43)
     {
-        byte[] randomValues = new byte[codeLength + 1];
-        string randomCode = "";
+        codeLength = Math.Clamp(codeLength, 43, 128);
+        var randomValues = new byte[codeLength];
+        RandomNumberGenerator.Fill(randomValues);
 
-        RandomNumberGenerator rng = RandomNumberGenerator.Create();
-
-        //
-        // Fill the array with random values
-        rng.GetBytes(randomValues);
-
-        //
-        // Create code verification string
+        var builder = new StringBuilder(codeLength);
         foreach (byte value in randomValues)
         {
-            int index = value / 4;
-            randomCode += VERIFIER_CODE_CHARACTERS[index];
+            builder.Append(VerifierCodeCharacters[value % VerifierCodeCharacters.Length]);
         }
 
-        return randomCode;
+        return builder.ToString();
     }
 
     public static string CreateChallenge(string codeVerifier)
     {
-        byte[] codeVerifierSha256;
-        codeVerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(codeVerifier));
-
-        string base64UrlEncoded = Convert.ToBase64String(codeVerifierSha256).Replace("=", "").Replace("+", "-").Replace("/",
-        "_");
-        return base64UrlEncoded;
-    }  
+        var codeVerifierSha256 = SHA256.HashData(Encoding.UTF8.GetBytes(codeVerifier));
+        return Convert.ToBase64String(codeVerifierSha256).Replace("=", "").Replace("+", "-").Replace("/", "_");
+    }
 }
