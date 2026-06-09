@@ -11,5 +11,8 @@
     "response_types": [
         "code"
     ],
-    "token_endpoint_auth_method": "none"
+    "token_endpoint_auth_method": "none",
+    "tos_uri": "https://jpda.dev/privacy-policy",
+    "policy_uri": "https://jpda.dev/privacy-policy",
+    "logo_uri": "https://oauth.studio/icon-192.png"
 }
