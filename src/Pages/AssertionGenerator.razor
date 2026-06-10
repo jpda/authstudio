@@ -1,8 +1,10 @@
 @page "/assertion"
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
+@inject IPersistentSettingsRepository SettingsRepository
 @inject ClientAssertionService ClientAssertionService
 @inject IJSRuntime JSRuntime
+@inject IWorkspaceSessionRepository WorkspaceSession
 
 <PageTitle>Client assertion</PageTitle>
 
@@ -15,7 +17,18 @@
 
 <div class="builder-grid">
     <section class="panel">
-        <h2 class="panel-title">Inputs</h2>
+        <div class="panel-header">
+            <h2 class="panel-title">Inputs</h2>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="SyncFromBuilder">
+                Sync from builder
+            </button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(SyncHint))
+        {
+            <p class="panel-hint mb-2">@SyncHint</p>
+        }
+
         <div class="field-grid">
             <label for="clientId">Client ID (iss/sub)</label>
             <InputText id="clientId" class="form-control form-control-sm mono" @bind-Value="ClientId" />
@@ -41,9 +54,6 @@
         <div class="panel-actions mt-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadIllustrativeKey">
                 Load illustrative key
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePrivateClientDefaults">
-                Use private client defaults
             </button>
             <button type="button" class="btn btn-primary btn-sm" @onclick="GenerateAssertion">
                 Generate assertion
@@ -81,7 +91,9 @@
             <pre class="mono url-display">@DecodedHeader</pre>
 
             <h3 class="panel-subtitle">Payload</h3>
-            <pre class="mono url-display mb-0">@DecodedPayload</pre>
+            <pre class="mono url-display">@DecodedPayload</pre>
+
+            <JwtInspector Jwt="@Assertion" Label="client assertion" OpenByDefault="true" />
         }
     </section>
 </div>
@@ -96,12 +108,49 @@
     private string DecodedHeader { get; set; } = "";
     private string DecodedPayload { get; set; } = "";
     private string? GeneratorError { get; set; }
+    private string? SyncHint { get; set; }
 
     private string JwksUrl => CimdDefaults.GetJwksDocumentUrl(NavigationManager);
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        ClientId = CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+        await SyncFromBuilder();
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SyncFromBuilder()
+    {
+        GeneratorError = null;
+        var issuer = await SettingsRepository.GetIssuerModelAsync();
+        var client = await SettingsRepository.GetClientAppModelAsync();
+        var snapshot = WorkspaceSync.FromWorkspace(issuer, client);
+
+        if (!string.IsNullOrWhiteSpace(snapshot.Audience))
+        {
+            Audience = snapshot.Audience;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.ClientId))
+        {
+            ClientId = snapshot.ClientId;
+        }
+        else
+        {
+            ClientId = CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+        }
+
+        if (snapshot.UsesPrivateKeyJwt)
+        {
+            Algorithm = snapshot.Algorithm;
+            if (!string.IsNullOrWhiteSpace(snapshot.PrivateKeyJwk))
+            {
+                PrivateKeyJwk = snapshot.PrivateKeyJwk;
+            }
+        }
+
+        SyncHint = string.IsNullOrWhiteSpace(snapshot.Audience)
+            ? "No token endpoint in builder yet — set issuer discovery first, then sync again."
+            : $"Synced audience from builder ({snapshot.Audience}).";
     }
 
     private async Task LoadIllustrativeKey()
@@ -116,12 +165,6 @@
         {
             GeneratorError = ex.Message;
         }
-    }
-
-    private void UsePrivateClientDefaults()
-    {
-        ClientId = CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
-        Audience = "";
     }
 
     private async Task GenerateAssertion()
@@ -157,6 +200,7 @@
                 PrivateKeyJwk,
                 Algorithm,
                 LifetimeSeconds);
+            await WorkspaceSession.SetLastClientAssertionAsync(Assertion);
             var decoded = JwtDecoder.Decode(Assertion);
             DecodedHeader = decoded.Header;
             DecodedPayload = decoded.Payload;

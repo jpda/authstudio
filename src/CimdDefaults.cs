@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Components;
 
 namespace authstudio;
@@ -37,6 +38,22 @@ public static class CimdDefaults
     public static bool ShouldDefaultClientId(string? clientId, bool? issuerSupportsCimd)
     {
         return string.IsNullOrWhiteSpace(clientId) || issuerSupportsCimd == true;
+    }
+
+    public static bool TryReadMetadataDocumentSupport(JsonElement root)
+    {
+        if (!root.TryGetProperty("client_id_metadata_document_supported", out var value))
+        {
+            return false;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String => bool.TryParse(value.GetString(), out var parsed) && parsed,
+            _ => false
+        };
     }
 
     public static bool TryReadMetadataDocumentSupport(IDictionary<string, object> additionalData)

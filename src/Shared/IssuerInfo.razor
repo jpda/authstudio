@@ -1,5 +1,5 @@
-@using Microsoft.IdentityModel.Protocols.OpenIdConnect
 @inject IPersistentSettingsRepository SettingsRepository
+@inject HttpClient Http
 
 <section class="panel">
     <div class="panel-header">
@@ -103,14 +103,14 @@
         FetchText = "…";
         try
         {
-            var config = await OpenIdConnectConfigurationRetriever.GetAsync(Issuer.ConfigurationUri, CancellationToken.None);
+            var config = await OpenIdDiscovery.FetchAsync(Http, Issuer.Issuer, Issuer.ConfigurationUri);
             Issuer.Issuer = config.Issuer;
             Issuer.AuthorizeEndpoint = config.AuthorizationEndpoint;
             Issuer.TokenEndpoint = config.TokenEndpoint;
             Issuer.UserInfoEndpoint = config.UserInfoEndpoint;
             Issuer.JwksUri = config.JwksUri;
             Issuer.IntrospectionEndpoint = config.IntrospectionEndpoint;
-            Issuer.ClientIdMetadataDocumentSupported = CimdDefaults.TryReadMetadataDocumentSupport(config.AdditionalData);
+            Issuer.ClientIdMetadataDocumentSupported = config.ClientIdMetadataDocumentSupported;
             Issuer.ConfigurationUri = string.Empty;
             await SettingsRepository.SetIssuerModelAsync(Issuer);
             await IssuerChanged.InvokeAsync(Issuer);

@@ -1,0 +1,437 @@
+@inject JweDecryptionService JweDecryption
+@inject JwtVerificationService JwtVerification
+@inject IPersistentSettingsRepository SettingsRepository
+@inject IWorkspaceSessionRepository WorkspaceSession
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+
+@if (!string.IsNullOrWhiteSpace(Jwt))
+{
+    <div class="jwt-inspector">
+        @if (TokenKind == CompactTokenKind.Jwe)
+        {
+            <p class="panel-hint jwt-kind-badge mb-1">JWE (encrypted)</p>
+
+            @if (JweHeader is not null)
+            {
+                <details class="jwt-claims-details" open="@OpenByDefault">
+                    <summary>JWE header (@Label)</summary>
+                    <table class="param-table jwt-claims-table">
+                        <tbody>
+                            <tr><td class="mono param-name">alg</td><td class="mono param-value">@JweHeader.Alg</td></tr>
+                            <tr><td class="mono param-name">enc</td><td class="mono param-value">@JweHeader.Enc</td></tr>
+                            @if (!string.IsNullOrEmpty(JweHeader.Kid))
+                            {
+                                <tr><td class="mono param-name">kid</td><td class="mono param-value">@JweHeader.Kid</td></tr>
+                            }
+                            @if (!string.IsNullOrEmpty(JweHeader.Typ))
+                            {
+                                <tr><td class="mono param-name">typ</td><td class="mono param-value">@JweHeader.Typ</td></tr>
+                            }
+                            @if (JweHeader.IsDeflated)
+                            {
+                                <tr><td class="mono param-name">zip</td><td class="mono param-value">DEF</td></tr>
+                            }
+                            @foreach (var field in JweHeader.AdditionalFields)
+                            {
+                                <tr><td class="mono param-name">@field.Key</td><td class="mono param-value">@field.Value</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </details>
+            }
+
+            <div class="jwt-decrypt-panel">
+                <label for="@DecryptKeyId" class="form-label">Decryption key (private or symmetric JWK)</label>
+                <textarea id="@DecryptKeyId" class="form-control form-control-sm mono assertion-key-input" rows="4"
+                    @bind="DecryptKeyJwk" @bind:after="PersistDecryptKey"></textarea>
+                <div class="panel-actions mt-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UseBuilderKey">
+                        Use builder key
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadIllustrativeKey">
+                        Load illustrative key
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="DecryptJwe"
+                        disabled="@(IsDecrypting || string.IsNullOrWhiteSpace(DecryptKeyJwk))">
+                        @(IsDecrypting ? "Decrypting…" : "Decrypt")
+                    </button>
+                </div>
+                <p class="panel-hint mb-0 mt-1">
+                    Supports RSA-OAEP, ECDH-ES (+KW), dir, and AES-KW with A128/A192/A256GCM.
+                </p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(DecryptError))
+            {
+                <p class="panel-hint text-danger mb-1 mt-2">@DecryptError</p>
+            }
+
+            @if (!string.IsNullOrEmpty(DecryptedPlaintext) && Claims.Count == 0 && DecryptedInnerKind == CompactTokenKind.Invalid)
+            {
+                <details class="jwt-claims-details mt-2" open="true">
+                    <summary>Decrypted plaintext</summary>
+                    <pre class="mono url-display mb-0">@DecryptedPlaintext</pre>
+                </details>
+            }
+        }
+
+        @if (TokenKind == CompactTokenKind.Jws || DecryptedInnerKind == CompactTokenKind.Jws)
+        {
+            @if (DecryptedInnerKind == CompactTokenKind.Jws)
+            {
+                <p class="panel-hint jwt-kind-badge mb-1">Nested JWS inside JWE</p>
+            }
+
+            @RenderJwsSection(ActiveJwsHeader, ActiveVerification, ActiveHeaderLabel)
+        }
+
+        @if (!string.IsNullOrEmpty(DecodeError))
+        {
+            <p class="panel-hint text-danger mb-1">@DecodeError</p>
+        }
+
+        @if (Claims.Count > 0)
+        {
+            <details class="jwt-claims-details" open="@OpenByDefault">
+                <summary>Claims (@ClaimsLabel)</summary>
+                <table class="param-table jwt-claims-table">
+                    <tbody>
+                        @foreach (var claim in Claims)
+                        {
+                            <tr>
+                                <td class="mono param-name">@claim.Key</td>
+                                <td class="mono param-value">@claim.Value</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </details>
+        }
+
+        @if (!string.IsNullOrEmpty(JwtIoUrl))
+        {
+            <div class="panel-hint">
+                <a href="@JwtIoUrl" target="tokeninfo" rel="noopener">jwt.io</a>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Jwt { get; set; } = "";
+
+    [Parameter]
+    public string Label { get; set; } = "JWT";
+
+    [Parameter]
+    public string JwtIoFragment { get; set; } = "token";
+
+    [Parameter]
+    public bool OpenByDefault { get; set; }
+
+    private string? DecodeError { get; set; }
+    private string? DecryptError { get; set; }
+    private List<KeyValuePair<string, string>> Claims { get; set; } = [];
+    private string JwtIoUrl { get; set; } = "";
+    private CompactTokenKind TokenKind { get; set; }
+    private CompactTokenKind DecryptedInnerKind { get; set; }
+    private JweHeaderInfo? JweHeader { get; set; }
+    private JwsHeaderInfo? JwsHeader { get; set; }
+    private JwsHeaderInfo? InnerJwsHeader { get; set; }
+    private JwtVerificationResult? Verification { get; set; }
+    private JwtVerificationResult? InnerVerification { get; set; }
+    private string InspectedJws { get; set; } = "";
+    private string DecryptKeyJwk { get; set; } = "";
+    private string DecryptedPlaintext { get; set; } = "";
+    private bool IsDecrypting { get; set; }
+    private bool IsVerifying { get; set; }
+    private bool _decryptKeyLoaded;
+    private string DecryptKeyId { get; } = $"jwt-decrypt-{Guid.NewGuid():N}";
+
+    private JwsHeaderInfo? ActiveJwsHeader =>
+        DecryptedInnerKind == CompactTokenKind.Jws ? InnerJwsHeader : JwsHeader;
+
+    private JwtVerificationResult? ActiveVerification =>
+        DecryptedInnerKind == CompactTokenKind.Jws ? InnerVerification : Verification;
+
+    private string ActiveHeaderLabel =>
+        DecryptedInnerKind == CompactTokenKind.Jws ? $"decrypted {Label}" : Label;
+
+    private string ClaimsLabel => ActiveHeaderLabel;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ResetState();
+        TokenKind = CompactToken.GetKind(Jwt);
+
+        if (string.IsNullOrWhiteSpace(Jwt))
+        {
+            return;
+        }
+
+        JwtIoUrl = $"https://jwt.io/#{JwtIoFragment}={Uri.EscapeDataString(Jwt)}";
+
+        if (!_decryptKeyLoaded)
+        {
+            DecryptKeyJwk = await WorkspaceSession.GetDecryptionKeyJwkAsync() ?? "";
+            _decryptKeyLoaded = true;
+        }
+
+        if (TokenKind == CompactTokenKind.Jws)
+        {
+            await InspectJwsAsync(Jwt, verifyOuter: true);
+            return;
+        }
+
+        if (TokenKind == CompactTokenKind.Jwe)
+        {
+            try
+            {
+                JweHeader = CompactToken.ParseJweHeader(Jwt);
+            }
+            catch (Exception ex)
+            {
+                DecodeError = ex.Message;
+            }
+
+            return;
+        }
+
+        DecodeError = "Token is not a signed JWT (3 segments) or JWE (5 segments).";
+    }
+
+    private void ResetState()
+    {
+        Claims = [];
+        DecodeError = null;
+        DecryptError = null;
+        JwtIoUrl = "";
+        JweHeader = null;
+        JwsHeader = null;
+        InnerJwsHeader = null;
+        Verification = null;
+        InnerVerification = null;
+        InspectedJws = "";
+        DecryptedPlaintext = "";
+        DecryptedInnerKind = CompactTokenKind.Invalid;
+        IsVerifying = false;
+    }
+
+    private async Task InspectJwsAsync(string token, bool verifyOuter)
+    {
+        try
+        {
+            var header = CompactToken.ParseJwsHeader(token);
+            var decoded = JwtDecoder.Decode(token);
+            var claims = CompactToken.ParseClaims(decoded.Payload);
+
+            if (verifyOuter)
+            {
+                JwsHeader = header;
+                Claims = claims;
+                InspectedJws = token;
+                await VerifyJwsAsync(token, claims, outer: true);
+            }
+            else
+            {
+                InnerJwsHeader = header;
+                Claims = claims;
+                InspectedJws = token;
+                await VerifyJwsAsync(token, claims, outer: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            DecodeError = ex.Message;
+        }
+    }
+
+    private async Task VerifyJwsAsync(string token, List<KeyValuePair<string, string>> claims, bool outer)
+    {
+        IsVerifying = true;
+        if (outer)
+        {
+            Verification = new JwtVerificationResult(JwtSignatureStatus.Verifying, "Checking signature…");
+        }
+        else
+        {
+            InnerVerification = new JwtVerificationResult(JwtSignatureStatus.Verifying, "Checking signature…");
+        }
+
+        StateHasChanged();
+
+        var result = await JwtVerification.VerifyAsync(token, claims);
+        if (outer)
+        {
+            Verification = result;
+        }
+        else
+        {
+            InnerVerification = result;
+        }
+
+        IsVerifying = false;
+    }
+
+    private async Task DecryptJwe()
+    {
+        if (IsDecrypting || TokenKind != CompactTokenKind.Jwe)
+        {
+            return;
+        }
+
+        DecryptError = null;
+        DecodeError = null;
+        Claims = [];
+        InnerJwsHeader = null;
+        InnerVerification = null;
+        DecryptedPlaintext = "";
+        DecryptedInnerKind = CompactTokenKind.Invalid;
+        IsDecrypting = true;
+
+        try
+        {
+            var plaintext = await JweDecryption.DecryptAsync(Jwt, DecryptKeyJwk);
+            DecryptedPlaintext = plaintext;
+            await ApplyDecryptedContentAsync(plaintext);
+            await PersistDecryptKey();
+        }
+        catch (Exception ex)
+        {
+            DecryptError = ex.Message;
+        }
+        finally
+        {
+            IsDecrypting = false;
+        }
+    }
+
+    private async Task ApplyDecryptedContentAsync(string plaintext)
+    {
+        var innerKind = CompactToken.GetKind(plaintext.Trim());
+        DecryptedInnerKind = innerKind;
+
+        if (innerKind == CompactTokenKind.Jws)
+        {
+            await InspectJwsAsync(plaintext.Trim(), verifyOuter: false);
+            return;
+        }
+
+        try
+        {
+            Claims = CompactToken.ParseClaims(plaintext);
+        }
+        catch
+        {
+            Claims = [];
+        }
+    }
+
+    private async Task UseBuilderKey()
+    {
+        var client = await SettingsRepository.GetClientAppModelAsync();
+        if (string.IsNullOrWhiteSpace(client?.SigningPrivateKeyJwk))
+        {
+            DecryptError = "No private JWK saved on the builder.";
+            return;
+        }
+
+        DecryptKeyJwk = client.SigningPrivateKeyJwk;
+        DecryptError = null;
+        await PersistDecryptKey();
+    }
+
+    private async Task LoadIllustrativeKey()
+    {
+        DecryptError = null;
+        try
+        {
+            DecryptKeyJwk = await Http.GetStringAsync(CimdDefaults.GetSigningKeyDocumentUrl(NavigationManager));
+            await PersistDecryptKey();
+        }
+        catch (Exception ex)
+        {
+            DecryptError = ex.Message;
+        }
+    }
+
+    private async Task PersistDecryptKey()
+    {
+        if (string.IsNullOrWhiteSpace(DecryptKeyJwk))
+        {
+            return;
+        }
+
+        await WorkspaceSession.SetDecryptionKeyJwkAsync(DecryptKeyJwk);
+    }
+
+    private async Task RetryVerification()
+    {
+        if (string.IsNullOrWhiteSpace(InspectedJws))
+        {
+            return;
+        }
+
+        await VerifyJwsAsync(InspectedJws, Claims, outer: DecryptedInnerKind != CompactTokenKind.Jws);
+    }
+
+    private RenderFragment RenderJwsSection(JwsHeaderInfo? header, JwtVerificationResult? verification, string headerLabel) =>
+        @<div class="jwt-jws-section">
+            @if (verification is not null)
+            {
+                <p class="jwt-sig-badge @SignatureBadgeClass(verification.Status) mb-1">@verification.Message</p>
+                @if (!string.IsNullOrEmpty(verification.JwksUri))
+                {
+                    <p class="panel-hint mb-1">
+                        JWKS: <a href="@verification.JwksUri" target="_blank" rel="noopener" class="mono">@verification.JwksUri</a>
+                    </p>
+                }
+            }
+
+            @if (header is not null)
+            {
+                <details class="jwt-claims-details" open="@OpenByDefault">
+                    <summary>JWT header (@headerLabel)</summary>
+                    <table class="param-table jwt-claims-table">
+                        <tbody>
+                            <tr><td class="mono param-name">alg</td><td class="mono param-value">@header.Alg</td></tr>
+                            @if (!string.IsNullOrEmpty(header.Kid))
+                            {
+                                <tr><td class="mono param-name">kid</td><td class="mono param-value">@header.Kid</td></tr>
+                            }
+                            else
+                            {
+                                <tr><td class="mono param-name">kid</td><td class="mono param-value text-muted">(not set)</td></tr>
+                            }
+                            @if (!string.IsNullOrEmpty(header.Typ))
+                            {
+                                <tr><td class="mono param-name">typ</td><td class="mono param-value">@header.Typ</td></tr>
+                            }
+                            @foreach (var field in header.AdditionalFields)
+                            {
+                                <tr><td class="mono param-name">@field.Key</td><td class="mono param-value">@field.Value</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </details>
+            }
+
+            <div class="panel-actions mt-1">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="RetryVerification"
+                    disabled="@IsVerifying">
+                    @(IsVerifying ? "Verifying…" : "Re-check signature")
+                </button>
+            </div>
+        </div>;
+
+    private static string SignatureBadgeClass(JwtSignatureStatus status) => status switch
+    {
+        JwtSignatureStatus.Valid => "jwt-sig-valid",
+        JwtSignatureStatus.Invalid => "jwt-sig-invalid",
+        JwtSignatureStatus.Unsigned => "jwt-sig-unsigned",
+        JwtSignatureStatus.Verifying => "jwt-sig-pending",
+        _ => "jwt-sig-unknown"
+    };
+}

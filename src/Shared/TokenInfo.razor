@@ -4,17 +4,13 @@
         <label for="idToken">ID token</label>
         <div>
             <InputTextArea id="idToken" class="form-control form-control-sm mono" @bind-Value="Token.IdToken" rows="3" />
-            <div class="panel-hint">
-                <a href="https://jwt.io/#id_token=@Token.IdToken" target="tokeninfo" rel="noopener">jwt.io</a>
-            </div>
+            <JwtInspector Jwt="@Token.IdToken" Label="ID token" JwtIoFragment="id_token" OpenByDefault="true" />
         </div>
 
         <label for="accessToken">Access token</label>
         <div>
             <InputTextArea id="accessToken" class="form-control form-control-sm mono" @bind-Value="Token.AccessToken" rows="3" />
-            <div class="panel-hint">
-                <a href="https://jwt.io/#access_token=@Token.AccessToken" target="tokeninfo" rel="noopener">jwt.io</a>
-            </div>
+            <JwtInspector Jwt="@Token.AccessToken" Label="access token" JwtIoFragment="access_token" OpenByDefault="true" />
         </div>
 
         <label for="refreshToken">Refresh token</label>

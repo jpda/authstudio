@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>authstudio</title>
     <link rel="preload" href="_framework/blazor.webassembly.js" as="script" />
+    <link rel="preload" href="css/app.css" as="style" />
     <base href="/" />
     <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
     <link href="css/app.css" rel="stylesheet" />
@@ -15,11 +16,22 @@
 
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="app-shell">
+            <header class="app-header">
+                <div class="app-header-brand">
+                    <a href="/" class="app-header-title">authstudio</a>
+                    <span class="app-header-tagline">OAuth2 + PKCE debugger</span>
+                </div>
+                <nav class="app-header-nav">
+                    <a href="/" class="app-header-link active">Builder</a>
+                    <a href="assertion" class="app-header-link">Assertion</a>
+                    <a href="code" class="app-header-link">Callback</a>
+                </nav>
+            </header>
+            <main class="app-main">
+                <p class="app-boot-status" role="status">Loading workspace…</p>
+            </main>
+        </div>
     </div>
 
     <div id="blazor-error-ui">
@@ -27,7 +39,20 @@
         <a href="" class="reload">Reload</a>
         <a class="dismiss">🗙</a>
     </div>
-    <script src="js/cryptoInterop.js"></script>
+    <script>
+        window.authstudioLoadCrypto = () => new Promise((resolve, reject) => {
+            if (window.authstudioCrypto) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'js/cryptoInterop.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load cryptoInterop.js'));
+            document.head.appendChild(script);
+        });
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
 </body>
 

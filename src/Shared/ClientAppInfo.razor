@@ -1,15 +1,10 @@
 ﻿@inject NavigationManager NavigationManager
 @inject IPersistentSettingsRepository SettingsRepository
+@inject WorkspacePresetService WorkspacePresets
 @inject HttpClient Http
 
 <section class="panel">
-    <div class="panel-header">
-        <h2 class="panel-title">Client</h2>
-        <div class="panel-actions">
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePublicClientCimd">Public CIMD</button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="UsePrivateClientCimd">Private CIMD</button>
-        </div>
-    </div>
+    <h2 class="panel-title">Client</h2>
 
     <p class="panel-hint">
         Public CIMD: <code>@PublicCimdUrl</code><br />
@@ -88,32 +83,9 @@
             ClientApp.ClientId = PublicCimdUrl;
         }
 
-        await PersistClientApp();
+        await SettingsRepository.SetClientAppModelAsync(ClientApp);
+        await ClientAppChanged.InvokeAsync(ClientApp);
         await base.OnInitializedAsync();
-    }
-
-    private async Task UsePublicClientCimd()
-    {
-        ClientApp.ClientId = PublicCimdUrl;
-        if (ClientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
-        {
-            ClientApp.TokenAuthMethod = TokenClientAuthMethod.None;
-            ClientApp.SigningPrivateKeyJwk = "";
-        }
-        await PersistClientApp();
-    }
-
-    private async Task UsePrivateClientCimd()
-    {
-        ClientApp.ClientId = PrivateCimdUrl;
-        ClientApp.TokenAuthMethod = TokenClientAuthMethod.PrivateKeyJwt;
-        ClientApp.SigningAlgorithm = "ES256";
-        ClientApp.ClientSecret = "";
-        if (string.IsNullOrWhiteSpace(ClientApp.SigningPrivateKeyJwk))
-        {
-            await LoadIllustrativeSigningKey();
-        }
-        await PersistClientApp();
     }
 
     private async Task LoadIllustrativeSigningKey()
@@ -154,6 +126,7 @@
     private async Task PersistClientApp()
     {
         await SettingsRepository.SetClientAppModelAsync(ClientApp);
+        await WorkspacePresets.MarkCustomAsync();
         await ClientAppChanged.InvokeAsync(ClientApp);
     }
 }
