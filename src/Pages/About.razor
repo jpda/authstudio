@@ -1,0 +1,21 @@
+@page "/about"
+
+<PageTitle>About authstudio</PageTitle>
+
+<section class="panel about-panel">
+    <h1 class="page-title">About</h1>
+    <p class="panel-hint">
+        Browser-based OAuth 2.0 / OpenID Connect debugger for PKCE authorize flows,
+        Client ID Metadata Documents, and <code>private_key_jwt</code> client assertions.
+    </p>
+    <div class="field-grid about-meta">
+        <span>Source</span>
+        <span>
+            <a href="@BuildInfo.RepositoryUrl" target="_blank" rel="noopener">@BuildInfo.RepositoryUrl</a>
+        </span>
+        <span>Build</span>
+        <span>
+            <a href="@BuildInfo.CommitUrl" target="_blank" rel="noopener" class="mono">@BuildInfo.CommitSha</a>
+        </span>
+    </div>
+</section>

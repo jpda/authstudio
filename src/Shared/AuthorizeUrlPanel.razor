@@ -16,40 +16,97 @@
     }
     else
     {
-        <div class="url-display mono">@Request.AuthorizeUrl</div>
+        <ul class="url-legend" aria-label="URL color key">
+            <li class="@AuthorizeUrlSyntax.Issuer">Issuer</li>
+            <li class="@AuthorizeUrlSyntax.ClientId">Client ID</li>
+            <li class="@AuthorizeUrlSyntax.RedirectUri">Redirect URI</li>
+            <li class="@AuthorizeUrlSyntax.Pkce">PKCE</li>
+            <li class="@AuthorizeUrlSyntax.OAuth">Request parameters</li>
+        </ul>
 
-        <h3 class="panel-subtitle">Query parameters</h3>
-        <table class="param-table">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Value</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var param in Request.GetQueryParameters())
+        <div class="authorize-url-body" @onmouseleave="ClearFocus">
+            <div class="url-display mono url-colored">
+                <span class="@($"{AuthorizeUrlSyntax.Issuer} {FocusClass(IssuerKey)}")"
+                    @onmouseenter="() => SetFocus(IssuerKey)">@BaseUrl</span>@if (OrderedParameters.Count > 0)
                 {
-                    <tr>
-                        <td class="mono param-name">@param.Key</td>
-                        <td class="mono param-value">@param.Value</td>
-                        <td class="param-copy">
-                            <button type="button" class="btn btn-outline-secondary btn-sm py-0"
-                                title="Copy value" @onclick="() => CopyValue(param.Value)">⎘</button>
-                        </td>
-                    </tr>
+                    <span class="url-punct @PunctFocusClass()">?</span>
+                    @for (var index = 0; index < OrderedParameters.Count; index++)
+                    {
+                        var param = OrderedParameters[index];
+                        if (index > 0)
+                        {
+                            <span class="url-punct @PunctFocusClass()">&amp;</span>
+                        }
+
+                        <span class="url-param @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
+                            @onmouseenter="() => SetFocus(param.Key)">
+                            <span class="url-key">@param.Key</span><span class="url-punct @PunctFocusClass()">=</span><span
+                                class="url-value">@param.Value</span>
+                        </span>
+                    }
                 }
-            </tbody>
-        </table>
+            </div>
+
+            <h3 class="panel-subtitle">Query parameters</h3>
+            <table class="param-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Value</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var param in OrderedParameters)
+                    {
+                        <tr class="param-row @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
+                            @onmouseenter="() => SetFocus(param.Key)">
+                            <td class="mono param-name">@param.Key</td>
+                            <td class="mono param-value">@param.Value</td>
+                            <td class="param-copy">
+                                <button type="button" class="btn btn-outline-secondary btn-sm py-0"
+                                    title="Copy value" @onclick="() => CopyValue(param.Value)">⎘</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 </section>
 
 @code {
+    private const string IssuerKey = "__issuer__";
+
     [Parameter, EditorRequired]
     public AuthorizeRequestModel Request { get; set; } = new();
 
     [Parameter, EditorRequired]
     public EventCallback OnAuthorize { get; set; }
+
+    private string? _focusedKey;
+
+    private string? BaseUrl => AuthorizeUrlSyntax.GetBaseUrl(Request.AuthorizeUrl);
+
+    private IReadOnlyList<KeyValuePair<string, string>> OrderedParameters =>
+        AuthorizeUrlSyntax.OrderParameters(Request.GetQueryParameters());
+
+    private void SetFocus(string key)
+    {
+        _focusedKey = key;
+    }
+
+    private void ClearFocus()
+    {
+        _focusedKey = null;
+    }
+
+    private string FocusClass(string key) =>
+        _focusedKey is null ? ""
+        : _focusedKey == key ? "param-focused"
+        : "param-dimmed";
+
+    private string PunctFocusClass() => _focusedKey is null ? "" : "param-dimmed";
 
     private async Task CopyUrl()
     {

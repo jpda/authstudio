@@ -3,6 +3,45 @@
 
 <head>
     <meta charset="utf-8" />
+    <script>
+        (function () {
+            var key = 'authstudio-theme';
+
+            function resolveTheme(preference) {
+                if (preference === 'light' || preference === 'dark') {
+                    return preference;
+                }
+
+                return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+
+            function getPreference() {
+                var stored = localStorage.getItem(key);
+                return stored === 'light' || stored === 'dark' ? stored : 'system';
+            }
+
+            window.authstudioTheme = {
+                applyPreference: function (preference) {
+                    localStorage.setItem(key, preference);
+                    document.documentElement.setAttribute('data-theme', resolveTheme(preference));
+                },
+                getPreference: getPreference,
+                getApplied: function () {
+                    return document.documentElement.getAttribute('data-theme') || 'light';
+                },
+                init: function () {
+                    document.documentElement.setAttribute('data-theme', resolveTheme(getPreference()));
+                    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+                        if (getPreference() === 'system') {
+                            document.documentElement.setAttribute('data-theme', resolveTheme('system'));
+                        }
+                    });
+                }
+            };
+
+            window.authstudioTheme.init();
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>authstudio</title>
     <link rel="preload" href="_framework/blazor.webassembly.js" as="script" />
@@ -26,6 +65,7 @@
                     <a href="/" class="app-header-link active">Builder</a>
                     <a href="assertion" class="app-header-link">Assertion</a>
                     <a href="code" class="app-header-link">Callback</a>
+                    <a href="about" class="app-header-link">About</a>
                 </nav>
             </header>
             <main class="app-main">
