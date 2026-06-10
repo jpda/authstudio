@@ -1,4 +1,5 @@
 @page "/mcp"
+@page "/mcp/{*McpServerUrlRoute}"
 @inject McpDiscoveryOrchestrator DiscoveryOrchestrator
 @inject McpDiscoveryBridgeService DiscoveryBridge
 @inject IMcpDiscoveryRepository DiscoveryRepository
@@ -40,7 +41,7 @@
     </div>
 
     <div class="panel-actions mt-2">
-        <button type="button" class="btn btn-primary btn-sm" @onclick="DiscoverAsync" disabled="@IsDiscovering">
+        <button type="button" class="btn btn-primary btn-sm" @onclick="DiscoverFromUiAsync" disabled="@IsDiscovering">
             @(IsDiscovering ? "Discovering…" : "Discover")
         </button>
         @if (Session?.AuthorizationServerMetadata is not null)
@@ -48,8 +49,17 @@
             <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="SendToBuilderAsync">
                 Send to Builder
             </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyShareLinkAsync">
+                Copy share link
+            </button>
             <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ExportJsonAsync">
                 Export JSON
+            </button>
+        }
+        else if (!string.IsNullOrWhiteSpace(McpServerUrl))
+        {
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyShareLinkAsync">
+                Copy share link
             </button>
         }
     </div>
@@ -109,15 +119,42 @@
 }
 
 @code {
+    [Parameter]
+    public string? McpServerUrlRoute { get; set; }
+
     private string McpServerUrl { get; set; } = "";
     private string? CanonicalResourcePreview { get; set; }
     private McpDiscoverySession? Session { get; set; }
     private string? Error { get; set; }
     private bool IsDiscovering { get; set; }
     private int SelectedAuthorizationServerIndex { get; set; }
+    private string? _linkedMcpServerUrl;
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (McpDiscoveryLink.TryParseRouteSegment(McpServerUrlRoute, out var routeUrl))
+        {
+            _linkedMcpServerUrl = routeUrl;
+        }
+        else
+        {
+            var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+            _linkedMcpServerUrl = McpDiscoveryLink.TryParseUri(uri, out var linkedUrl) ? linkedUrl : null;
+        }
+
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(_linkedMcpServerUrl))
+        {
+            McpServerUrl = _linkedMcpServerUrl;
+            UpdateCanonicalPreview();
+            await DiscoverAsync(updateShareUrl: false);
+            return;
+        }
+
         McpServerUrl = await DiscoveryRepository.GetLastMcpServerUrlAsync() ?? "";
         Session = await DiscoveryRepository.GetLastSessionAsync();
         if (Session is not null)
@@ -145,7 +182,9 @@
         }
     }
 
-    private async Task DiscoverAsync()
+    private Task DiscoverFromUiAsync() => DiscoverAsync();
+
+    private async Task DiscoverAsync(bool updateShareUrl = true)
     {
         Error = null;
         IsDiscovering = true;
@@ -159,6 +198,11 @@
             await DiscoveryRepository.SetLastSessionAsync(Session);
             await DiscoveryRepository.SetLastMcpServerUrlAsync(McpServerUrl);
             SelectedAuthorizationServerIndex = Session.SelectedAuthorizationServerIndex;
+
+            if (updateShareUrl)
+            {
+                SyncShareUrl();
+            }
         }
         catch (Exception ex)
         {
@@ -168,6 +212,32 @@
         {
             IsDiscovering = false;
         }
+    }
+
+    private void SyncShareUrl()
+    {
+        if (string.IsNullOrWhiteSpace(McpServerUrl))
+        {
+            return;
+        }
+
+        var targetPath = McpDiscoveryLink.BuildPath(McpServerUrl);
+        var currentPath = NavigationManager.ToAbsoluteUri(NavigationManager.Uri).AbsolutePath;
+        if (!string.Equals(currentPath, targetPath, StringComparison.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo(targetPath, replace: true);
+        }
+    }
+
+    private async Task CopyShareLinkAsync()
+    {
+        if (string.IsNullOrWhiteSpace(McpServerUrl))
+        {
+            return;
+        }
+
+        var shareUrl = NavigationManager.ToAbsoluteUri(McpDiscoveryLink.BuildPath(McpServerUrl)).ToString();
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
     }
 
     private async Task RediscoverWithSelectedAsAsync()

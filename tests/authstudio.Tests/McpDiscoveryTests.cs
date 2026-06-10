@@ -123,6 +123,40 @@ public class McpResourceProbeTests
     }
 }
 
+public class McpDiscoveryLinkTests
+{
+    [Fact]
+    public void BuildPath_percent_encodes_mcp_server_url()
+    {
+        Assert.Equal(
+            "/mcp/https%3A%2F%2Fmcp.example.com%2Facme%2Fteam1%2Fweather%2Fmcp",
+            McpDiscoveryLink.BuildPath("https://mcp.example.com/acme/team1/weather/mcp"));
+    }
+
+    [Fact]
+    public void TryParseRouteSegment_accepts_encoded_and_unencoded_paths()
+    {
+        Assert.True(McpDiscoveryLink.TryParseRouteSegment(
+            "https%3A%2F%2Fmcp.example.com%2Fmcp",
+            out var encoded));
+        Assert.Equal("https://mcp.example.com/mcp", encoded);
+
+        Assert.True(McpDiscoveryLink.TryParseRouteSegment(
+            "https://mcp.example.com/mcp",
+            out var plain));
+        Assert.Equal("https://mcp.example.com/mcp", plain);
+    }
+
+    [Fact]
+    public void TryParseUri_reads_query_string_url()
+    {
+        var uri = new Uri("https://authstudio.example/mcp?url=https%3A%2F%2Fmcp.example.com%2Fmcp");
+
+        Assert.True(McpDiscoveryLink.TryParseUri(uri, out var mcpServerUrl));
+        Assert.Equal("https://mcp.example.com/mcp", mcpServerUrl);
+    }
+}
+
 public class AuthorizationServerMetadataValidatorTests
 {
     [Fact]
