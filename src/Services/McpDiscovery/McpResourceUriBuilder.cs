@@ -50,9 +50,17 @@ public static class McpResourceUriBuilder
         if (!string.IsNullOrEmpty(path))
         {
             candidates.Add($"{origin}/.well-known/oauth-protected-resource/{path}");
+
+            var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            for (var index = 1; index < segments.Length; index++)
+            {
+                var prefix = string.Join('/', segments[..index]);
+                var suffix = string.Join('/', segments[index..]);
+                candidates.Add($"{origin}/{prefix}/.well-known/oauth-protected-resource/{suffix}");
+            }
         }
 
         candidates.Add($"{origin}/.well-known/oauth-protected-resource");
-        return candidates;
+        return candidates.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }
 }

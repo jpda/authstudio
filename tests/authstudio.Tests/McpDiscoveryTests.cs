@@ -18,8 +18,20 @@ public class McpResourceUriBuilderTests
         Assert.Equal(
             [
                 "https://example.com/.well-known/oauth-protected-resource/public/mcp",
+                "https://example.com/public/.well-known/oauth-protected-resource/mcp",
                 "https://example.com/.well-known/oauth-protected-resource"
             ],
+            urls);
+    }
+
+    [Fact]
+    public void BuildProtectedResourceMetadataUrls_includes_path_insertion_for_nested_mcp_paths()
+    {
+        var urls = McpResourceUriBuilder.BuildProtectedResourceMetadataUrls(
+            "https://mcp.example.com/acme/team1/weather/mcp");
+
+        Assert.Contains(
+            "https://mcp.example.com/acme/team1/.well-known/oauth-protected-resource/weather/mcp",
             urls);
     }
 }
@@ -38,6 +50,22 @@ public class WwwAuthenticateParserTests
         Assert.Equal("https://mcp.example.com/.well-known/oauth-protected-resource", challenge!.ResourceMetadataUrl);
         Assert.Equal("files:read files:write", challenge.Scope);
         Assert.Equal("invalid_token", challenge.Error);
+    }
+
+    [Fact]
+    public void FindBearerChallenge_reads_resource_metadata_when_error_description_contains_commas()
+    {
+        const string header =
+            "Bearer error=\"invalid_token\", error_description=\"Authentication failed. The provided bearer token is invalid, expired, or no longer recognized by the server. To resolve: clear authentication tokens in your MCP client and reconnect. Your client should automatically re-register and obtain new tokens.\", resource_metadata=\"https://mcp.example.com/acme/team1/.well-known/oauth-protected-resource/weather/mcp\"";
+
+        var challenge = WwwAuthenticateParser.FindBearerChallenge(header);
+
+        Assert.NotNull(challenge);
+        Assert.Equal(
+            "https://mcp.example.com/acme/team1/.well-known/oauth-protected-resource/weather/mcp",
+            challenge!.ResourceMetadataUrl);
+        Assert.Equal("invalid_token", challenge.Error);
+        Assert.Contains("invalid, expired", challenge.ErrorDescription, StringComparison.Ordinal);
     }
 }
 
