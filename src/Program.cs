@@ -8,6 +8,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddBlazoredLocalStorage();
+builder.Services.AddSingleton<CryptoInteropService>();
 builder.Services.AddScoped<OAuthBuilderActions>();
 builder.Services.AddScoped<ClientAssertionService>();
 builder.Services.AddScoped<JweDecryptionService>();

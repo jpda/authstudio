@@ -81,6 +81,28 @@ a,
     color: var(--as-accent);
 }
 
+.btn {
+    display: inline-block;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+    text-decoration: none;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    border-radius: var(--as-radius);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    background-color: transparent;
+    color: var(--as-text);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;
+}
+
 .btn-primary {
     color: #fff;
     background-color: var(--as-accent);
@@ -91,6 +113,113 @@ a,
     background-color: var(--as-accent-hover);
     border-color: var(--as-accent-hover);
 }
+
+.btn-outline-secondary {
+    color: var(--as-muted);
+    border-color: var(--as-border);
+    background-color: transparent;
+}
+
+.btn-outline-secondary:hover {
+    color: var(--as-text);
+    background-color: var(--as-inset-bg);
+    border-color: var(--as-border);
+}
+
+.form-control,
+.form-select,
+textarea.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    color: var(--as-text);
+    background-color: var(--as-surface);
+    border: 1px solid var(--as-border);
+    border-radius: var(--as-radius);
+}
+
+.form-select {
+    padding-right: 2rem;
+}
+
+.form-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--as-muted);
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.form-check-input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+}
+
+.form-check-label {
+    font-size: 0.875rem;
+}
+
+.input-group {
+    display: flex;
+    width: 100%;
+}
+
+.input-group .form-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.input-group .btn {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group-sm .form-control,
+.input-group-sm .btn {
+    font-size: 0.8125rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+.alert {
+    border: 1px solid transparent;
+    border-radius: var(--as-radius);
+    padding: 0.75rem 1rem;
+}
+
+.alert-danger {
+    color: #991b1b;
+    background-color: #fef2f2;
+    border-color: #fecaca;
+}
+
+.alert-warning {
+    color: #92400e;
+    background-color: #fffbeb;
+    border-color: #fde68a;
+}
+
+.text-muted {
+    color: var(--as-muted) !important;
+}
+
+.text-danger {
+    color: #b91c1c !important;
+}
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.py-0 { padding-top: 0; padding-bottom: 0; }
 
 .btn:focus,
 .btn:active:focus,

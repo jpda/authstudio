@@ -2,16 +2,11 @@ using Microsoft.JSInterop;
 
 namespace authstudio;
 
-public class JweDecryptionService(IJSRuntime jsRuntime)
+public class JweDecryptionService(IJSRuntime jsRuntime, CryptoInteropService cryptoInterop)
 {
-    private int _cryptoReady;
-
     public async Task<string> DecryptAsync(string jwe, string privateKeyJwkJson)
     {
-        if (Interlocked.CompareExchange(ref _cryptoReady, 1, 0) == 0)
-        {
-            await jsRuntime.InvokeVoidAsync("authstudioLoadCrypto");
-        }
+        await cryptoInterop.EnsureReadyAsync();
 
         return await jsRuntime.InvokeAsync<string>(
             "authstudioCrypto.decryptJwe",

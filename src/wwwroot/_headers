@@ -19,5 +19,17 @@
   Content-Encoding: br
   Content-Type: application/json
 
+/css/*
+  Cache-Control: public, max-age=86400
+
+/js/*
+  Cache-Control: public, max-age=86400
+
+/favicon.png
+  Cache-Control: public, max-age=86400
+
 /
+  Cache-Control: no-cache
+
+/index.html
   Cache-Control: no-cache

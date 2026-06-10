@@ -6,9 +6,9 @@ public class JwtVerificationService(
     IJSRuntime jsRuntime,
     JwksService jwksService,
     IPersistentSettingsRepository settingsRepository,
-    HttpClient http)
+    HttpClient http,
+    CryptoInteropService cryptoInterop)
 {
-    private int _cryptoReady;
 
     private static readonly HashSet<string> SupportedAlgorithms = new(StringComparer.Ordinal)
     {
@@ -84,10 +84,7 @@ public class JwtVerificationService(
                 header.Kid);
         }
 
-        if (Interlocked.CompareExchange(ref _cryptoReady, 1, 0) == 0)
-        {
-            await jsRuntime.InvokeVoidAsync("authstudioLoadCrypto");
-        }
+        await cryptoInterop.EnsureReadyAsync();
 
         try
         {

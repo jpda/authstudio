@@ -4,10 +4,8 @@ using Microsoft.JSInterop;
 
 namespace authstudio;
 
-public class ClientAssertionService(IJSRuntime jsRuntime)
+public class ClientAssertionService(IJSRuntime jsRuntime, CryptoInteropService cryptoInterop)
 {
-    private int _cryptoReady;
-
     public async Task<string> CreateAssertionAsync(
         string clientId,
         string audience,
@@ -15,10 +13,7 @@ public class ClientAssertionService(IJSRuntime jsRuntime)
         string? algorithm = null,
         int lifetimeSeconds = 300)
     {
-        if (Interlocked.CompareExchange(ref _cryptoReady, 1, 0) == 0)
-        {
-            await jsRuntime.InvokeVoidAsync("authstudioLoadCrypto");
-        }
+        await cryptoInterop.EnsureReadyAsync();
 
         using var document = JsonDocument.Parse(privateKeyJwkJson);
         var jwk = document.RootElement;

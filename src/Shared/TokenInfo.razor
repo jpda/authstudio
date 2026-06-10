@@ -17,7 +17,7 @@
         <InputText id="refreshToken" class="form-control form-control-sm mono" @bind-Value="Token.RefreshToken" />
 
         <label for="expiresIn">Expires</label>
-        <span id="expiresIn" class="mono">@Token.ExpiresAt.ToLocalTime()</span>
+        <span id="expiresIn" class="mono">@Token.ExpiresAt.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss") UTC</span>
 
         <label for="tokenType">Type</label>
         <span id="tokenType">@Token.TokenType</span>
