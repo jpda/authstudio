@@ -2,18 +2,51 @@ const FORWARDED_HEADERS = ["www-authenticate", "content-type", "cache-control"];
 
 /** @param {{ request: Request }} context */
 export async function onRequestGet(context) {
-  const requestUrl = new URL(context.request.url);
-  const target = requestUrl.searchParams.get("url");
+  return handleDiscovery(context.request);
+}
+
+/** @param {{ request: Request }} context */
+export async function onRequestPost(context) {
+  return handleDiscovery(context.request);
+}
+
+/** @param {Request} request */
+async function handleDiscovery(request) {
+  const requestUrl = new URL(request.url);
+  let target;
+  let method = "GET";
+  let body;
+
+  if (request.method === "POST") {
+    let payload;
+    try {
+      payload = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON body." }, 400);
+    }
+
+    target = payload?.url;
+    method = payload?.method ?? "POST";
+    body = payload?.body;
+  } else {
+    target = requestUrl.searchParams.get("url");
+    method = requestUrl.searchParams.get("method") ?? "GET";
+    body = requestUrl.searchParams.get("body");
+  }
 
   if (!target) {
-    return json({ error: "Missing url query parameter." }, 400);
+    return json({ error: "Missing url." }, 400);
+  }
+
+  if (method !== "GET" && method !== "POST") {
+    return json({ error: "Only GET and POST are supported." }, 400);
   }
 
   let parsed;
   try {
     parsed = new URL(target);
   } catch {
-    return json({ error: "Invalid url query parameter." }, 400);
+    return json({ error: "Invalid url." }, 400);
   }
 
   if (parsed.protocol !== "https:") {
@@ -25,15 +58,22 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const response = await fetch(parsed.toString(), {
-      method: "GET",
+    /** @type {RequestInit} */
+    const init = {
+      method,
       redirect: "follow",
       headers: {
-        Accept: "*/*",
+        Accept: method === "POST" ? "application/json, text/event-stream" : "*/*",
       },
-    });
+    };
 
-    const body = await response.text();
+    if (method === "POST") {
+      init.headers["Content-Type"] = "application/json";
+      init.body = body ?? "";
+    }
+
+    const response = await fetch(parsed.toString(), init);
+    const responseBody = await response.text();
     const headers = {};
     for (const name of FORWARDED_HEADERS) {
       const value = response.headers.get(name);
@@ -45,7 +85,7 @@ export async function onRequestGet(context) {
     return json({
       status: response.status,
       headers,
-      body,
+      body: responseBody,
       finalUrl: response.url,
     });
   } catch (error) {

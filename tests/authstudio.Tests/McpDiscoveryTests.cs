@@ -82,6 +82,19 @@ public class ProtectedResourceMetadataValidatorTests
     }
 }
 
+public class McpResourceProbeTests
+{
+    [Theory]
+    [InlineData(401, false)]
+    [InlineData(405, true)]
+    [InlineData(200, true)]
+    [InlineData(403, true)]
+    public void ShouldSendPostProbe_when_get_is_not_401(int getStatusCode, bool expected)
+    {
+        Assert.Equal(expected, McpResourceProbe.ShouldSendPostProbe(getStatusCode));
+    }
+}
+
 public class AuthorizationServerMetadataValidatorTests
 {
     [Fact]

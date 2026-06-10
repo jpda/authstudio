@@ -109,10 +109,29 @@ public class McpDiscoveryOrchestrator(DiscoveryFetchService fetchService)
         McpDiscoverySession session,
         CancellationToken cancellationToken)
     {
-        var step = NewStep("resource-probe", "Unauthenticated probe", session.McpServerUrl);
+        var step = NewStep("resource-probe", "Unauthenticated MCP probe", session.McpServerUrl);
         try
         {
-            var fetch = await fetchService.GetAsync(session.McpServerUrl, cancellationToken);
+            var getFetch = await fetchService.GetAsync(session.McpServerUrl, cancellationToken);
+            DiscoveryFetchResult fetch;
+            string methodUsed;
+
+            if (!McpResourceProbe.ShouldSendPostProbe(getFetch.StatusCode))
+            {
+                fetch = getFetch;
+                methodUsed = "GET";
+            }
+            else
+            {
+                step.Notes.Add(
+                    getFetch.StatusCode == 405
+                        ? "GET returned HTTP 405 (POST-only MCP endpoint). Retrying with unauthenticated initialize POST."
+                        : $"GET returned HTTP {getFetch.StatusCode}. Retrying with unauthenticated initialize POST.");
+                fetch = await fetchService.PostMcpInitializeAsync(session.McpServerUrl, cancellationToken);
+                methodUsed = "POST";
+            }
+
+            step.RequestMethod = methodUsed;
             ApplyFetch(step, fetch);
             session.WwwAuthenticateRaw = fetch.Headers.TryGetValue("WWW-Authenticate", out var value) ? value : null;
 
@@ -124,13 +143,7 @@ public class McpDiscoveryOrchestrator(DiscoveryFetchService fetchService)
                 _ => DiscoveryStepStatus.Info
             };
 
-            step.Description = fetch.StatusCode switch
-            {
-                401 => "Server challenged the unauthenticated request (expected for MCP).",
-                403 => "Server returned 403 Forbidden without a classic 401 challenge.",
-                >= 200 and < 300 => "Server accepted the unauthenticated request. MCP clients expect a 401 challenge.",
-                _ => $"Server returned HTTP {fetch.StatusCode}."
-            };
+            step.Description = DescribeProbeResult(fetch.StatusCode, methodUsed, getFetch.StatusCode);
 
             if (fetch.StatusCode != 401)
             {
@@ -147,8 +160,20 @@ public class McpDiscoveryOrchestrator(DiscoveryFetchService fetchService)
                     "probe-status",
                     "401 challenge",
                     DiscoveryStepStatus.Success,
-                    "Unauthenticated request received HTTP 401.",
+                    methodUsed == "POST"
+                        ? "Unauthenticated initialize POST received HTTP 401."
+                        : "Unauthenticated request received HTTP 401.",
                     "MCP"));
+
+                if (methodUsed == "POST" && getFetch.StatusCode == 405)
+                {
+                    step.Checks.Add(new ComplianceCheck(
+                        "probe-post-only",
+                        "POST-only MCP endpoint",
+                        DiscoveryStepStatus.Info,
+                        "GET returned HTTP 405, which is valid when the server does not offer an SSE stream.",
+                        "MCP Streamable HTTP"));
+                }
             }
         }
         catch (Exception ex)
@@ -159,6 +184,20 @@ public class McpDiscoveryOrchestrator(DiscoveryFetchService fetchService)
 
         return step;
     }
+
+    private static string DescribeProbeResult(int statusCode, string methodUsed, int getStatusCode) =>
+        statusCode switch
+        {
+            401 when methodUsed == "POST" && getStatusCode == 405 =>
+                "POST-only MCP endpoint returned HTTP 401 with Bearer challenge (GET correctly returned 405).",
+            401 when methodUsed == "POST" =>
+                "Server challenged the unauthenticated initialize POST (expected for MCP).",
+            401 => "Server challenged the unauthenticated request (expected for MCP).",
+            403 => "Server returned 403 Forbidden without a classic 401 challenge.",
+            >= 200 and < 300 =>
+                "Server accepted the unauthenticated MCP request. MCP clients expect a 401 challenge.",
+            _ => $"Server returned HTTP {statusCode} to the unauthenticated {methodUsed} probe."
+        };
 
     private async Task<DiscoveryStep> FetchProtectedResourceMetadataAsync(
         McpDiscoverySession session,

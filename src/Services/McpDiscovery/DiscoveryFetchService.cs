@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using System.Text.Json;
+using System.Text;
 using Microsoft.AspNetCore.Components;
 
 namespace authstudio;
@@ -15,33 +15,69 @@ public class DiscoveryFetchService(
         "Cache-Control"
     ];
 
-    public async Task<DiscoveryFetchResult> GetAsync(string url, CancellationToken cancellationToken = default)
+    public Task<DiscoveryFetchResult> GetAsync(string url, CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Get, url, body: null, cancellationToken);
+
+    public Task<DiscoveryFetchResult> PostMcpInitializeAsync(string url, CancellationToken cancellationToken = default) =>
+        SendAsync(
+            HttpMethod.Post,
+            url,
+            McpResourceProbe.InitializeRequestJson,
+            cancellationToken);
+
+    private async Task<DiscoveryFetchResult> SendAsync(
+        HttpMethod method,
+        string url,
+        string? body,
+        CancellationToken cancellationToken)
     {
         try
         {
             var client = clientFactory.CreateClient("DiscoveryClient");
-            using var response = await client.GetAsync(url, cancellationToken);
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var request = BuildRequest(method, url, body);
+            using var response = await client.SendAsync(request, cancellationToken);
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
             return new DiscoveryFetchResult(
                 url,
                 (int)response.StatusCode,
                 ReadHeaders(response),
-                body,
+                responseBody,
                 DiscoveryFetchVia.Browser);
         }
         catch (Exception ex) when (ShouldFallbackToProxy(ex))
         {
-            return await GetViaProxyAsync(url, cancellationToken);
+            return await SendViaProxyAsync(method.Method, url, body, cancellationToken);
         }
     }
 
-    private async Task<DiscoveryFetchResult> GetViaProxyAsync(string url, CancellationToken cancellationToken)
+    private static HttpRequestMessage BuildRequest(HttpMethod method, string url, string? body)
     {
-        var proxyUrl =
-            $"{navigationManager.BaseUri}api/discover?url={Uri.EscapeDataString(url)}";
+        var request = new HttpRequestMessage(method, url);
+        if (method == HttpMethod.Post && body is not null)
+        {
+            request.Content = new StringContent(body, Encoding.UTF8, "application/json");
+            request.Headers.TryAddWithoutValidation("Accept", "application/json, text/event-stream");
+        }
 
+        return request;
+    }
+
+    private async Task<DiscoveryFetchResult> SendViaProxyAsync(
+        string method,
+        string url,
+        string? body,
+        CancellationToken cancellationToken)
+    {
         var client = clientFactory.CreateClient("DiscoveryClient");
-        using var response = await client.GetAsync(proxyUrl, cancellationToken);
+        using var response = await client.PostAsJsonAsync(
+            $"{navigationManager.BaseUri}api/discover",
+            new ProxyDiscoveryRequest
+            {
+                Url = url,
+                Method = method,
+                Body = body
+            },
+            cancellationToken);
         response.EnsureSuccessStatusCode();
 
         var payload = await response.Content.ReadFromJsonAsync<ProxyDiscoveryResponse>(cancellationToken)
@@ -80,6 +116,13 @@ public class DiscoveryFetchService(
 
     private static bool ShouldFallbackToProxy(Exception ex) =>
         ex is HttpRequestException or TaskCanceledException;
+
+    private sealed class ProxyDiscoveryRequest
+    {
+        public string Url { get; set; } = "";
+        public string Method { get; set; } = "GET";
+        public string? Body { get; set; }
+    }
 
     private sealed class ProxyDiscoveryResponse
     {
