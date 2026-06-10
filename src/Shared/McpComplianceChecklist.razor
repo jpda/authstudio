@@ -1,0 +1,36 @@
+@if (Checks.Count == 0)
+{
+    <p class="panel-hint mb-0">No checks recorded.</p>
+}
+else
+{
+    <ul class="@(Compact ? "mcp-checklist-compact" : "mcp-checklist")">
+        @foreach (var check in Checks)
+        {
+            <li class="@StatusClass(check.Status)">
+                <span class="mcp-check-title">@check.Title</span>
+                <span class="mcp-check-message">@check.Message</span>
+                @if (!Compact && !string.IsNullOrEmpty(check.SpecRef))
+                {
+                    <span class="mcp-check-spec">@check.SpecRef</span>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<ComplianceCheck> Checks { get; set; } = Array.Empty<ComplianceCheck>();
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    private static string StatusClass(DiscoveryStepStatus status) => status switch
+    {
+        DiscoveryStepStatus.Success => "mcp-check-success",
+        DiscoveryStepStatus.Warning => "mcp-check-warning",
+        DiscoveryStepStatus.Failed => "mcp-check-failed",
+        _ => "mcp-check-info"
+    };
+}

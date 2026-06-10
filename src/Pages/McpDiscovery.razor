@@ -1,0 +1,221 @@
+@page "/mcp"
+@inject McpDiscoveryOrchestrator DiscoveryOrchestrator
+@inject McpDiscoveryBridgeService DiscoveryBridge
+@inject IMcpDiscoveryRepository DiscoveryRepository
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>MCP Discover</PageTitle>
+
+<h1 class="page-title">MCP server discovery</h1>
+<p class="panel-hint mb-2">
+    Paste your MCP server URL to walk through the protected resource and authorization server metadata
+    that a compliant client like Claude, ChatGPT, or VS Code would discover before authenticating a user.
+</p>
+
+<section class="panel">
+    <div class="field-grid">
+        <label for="mcpUrl">MCP server URL</label>
+        <InputText id="mcpUrl" class="form-control form-control-sm mono" @bind-Value="McpServerUrl"
+            placeholder="https://mcp.example.com/mcp" />
+
+        @if (!string.IsNullOrEmpty(CanonicalResourcePreview))
+        {
+            <span>Canonical resource</span>
+            <code class="mono">@CanonicalResourcePreview</code>
+        }
+
+        @if (Session?.ProtectedResourceMetadata?.AuthorizationServers.Count > 1)
+        {
+            <label for="asSelect">Authorization server</label>
+            <InputSelect id="asSelect" class="form-select form-select-sm" @bind-Value="SelectedAuthorizationServerIndex"
+                @bind-Value:after="RediscoverWithSelectedAsAsync">
+                @for (var index = 0; index < Session.ProtectedResourceMetadata.AuthorizationServers.Count; index++)
+                {
+                    var server = Session.ProtectedResourceMetadata.AuthorizationServers[index];
+                    <option value="@index">@(index == 0 ? $"{server} (client default)" : server)</option>
+                }
+            </InputSelect>
+        }
+    </div>
+
+    <div class="panel-actions mt-2">
+        <button type="button" class="btn btn-primary btn-sm" @onclick="DiscoverAsync" disabled="@IsDiscovering">
+            @(IsDiscovering ? "Discovering…" : "Discover")
+        </button>
+        @if (Session?.AuthorizationServerMetadata is not null)
+        {
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="SendToBuilderAsync">
+                Send to Builder
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ExportJsonAsync">
+                Export JSON
+            </button>
+        }
+    </div>
+</section>
+
+@if (!string.IsNullOrEmpty(Error))
+{
+    <ErrorAlert Title="Discovery failed" Message="@Error" Variant="danger" />
+}
+
+@if (Session is not null)
+{
+    @if (Session.ComplianceChecks.Count > 0)
+    {
+        <section class="panel mt-2">
+            <h2 class="panel-title">Compliance summary</h2>
+            <McpComplianceChecklist Checks="Session.ComplianceChecks" />
+        </section>
+    }
+
+    <section class="panel mt-2">
+        <h2 class="panel-title">Discovery timeline</h2>
+        <McpDiscoveryTimeline Steps="Session.Steps" />
+    </section>
+
+    @if (Session.ProtectedResourceMetadata is not null)
+    {
+        <section class="panel mt-2">
+            <h2 class="panel-title">Protected resource metadata</h2>
+            <p class="panel-hint mb-1">
+                Source: <code class="mono">@Session.ProtectedResourceMetadata.SourceUrl</code>
+            </p>
+            <pre class="mono url-display mb-0">@Session.ProtectedResourceMetadata.RawJson</pre>
+        </section>
+    }
+
+    @if (Session.AuthorizationServerMetadata is not null)
+    {
+        <section class="panel mt-2">
+            <h2 class="panel-title">Authorization server metadata</h2>
+            <p class="panel-hint mb-1">
+                Source: <code class="mono">@Session.AuthorizationServerMetadataUrl</code>
+            </p>
+            <div class="field-grid about-meta">
+                <span>Issuer</span><code class="mono">@Session.AuthorizationServerMetadata.Issuer</code>
+                <span>Authorize</span><code class="mono">@Session.AuthorizationServerMetadata.AuthorizationEndpoint</code>
+                <span>Token</span><code class="mono">@Session.AuthorizationServerMetadata.TokenEndpoint</code>
+                <span>CIMD</span><code class="mono">@FormatCimd(Session.AuthorizationServerMetadata.ClientIdMetadataDocumentSupported)</code>
+                <span>PKCE</span><code class="mono">@string.Join(", ", Session.AuthorizationServerMetadata.CodeChallengeMethodsSupported)</code>
+                @if (!string.IsNullOrWhiteSpace(Session.SuggestedScope))
+                {
+                    <span>Suggested scope</span><code class="mono">@Session.SuggestedScope</code>
+                }
+            </div>
+        </section>
+    }
+}
+
+@code {
+    private string McpServerUrl { get; set; } = "";
+    private string? CanonicalResourcePreview { get; set; }
+    private McpDiscoverySession? Session { get; set; }
+    private string? Error { get; set; }
+    private bool IsDiscovering { get; set; }
+    private int SelectedAuthorizationServerIndex { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        McpServerUrl = await DiscoveryRepository.GetLastMcpServerUrlAsync() ?? "";
+        Session = await DiscoveryRepository.GetLastSessionAsync();
+        if (Session is not null)
+        {
+            SelectedAuthorizationServerIndex = Session.SelectedAuthorizationServerIndex;
+            CanonicalResourcePreview = Session.CanonicalResourceUri;
+        }
+        else
+        {
+            UpdateCanonicalPreview();
+        }
+    }
+
+    private void UpdateCanonicalPreview()
+    {
+        try
+        {
+            CanonicalResourcePreview = string.IsNullOrWhiteSpace(McpServerUrl)
+                ? null
+                : McpResourceUriBuilder.BuildCanonicalResourceUri(McpServerUrl);
+        }
+        catch
+        {
+            CanonicalResourcePreview = null;
+        }
+    }
+
+    private async Task DiscoverAsync()
+    {
+        Error = null;
+        IsDiscovering = true;
+        UpdateCanonicalPreview();
+
+        try
+        {
+            Session = await DiscoveryOrchestrator.DiscoverAsync(
+                McpServerUrl,
+                SelectedAuthorizationServerIndex);
+            await DiscoveryRepository.SetLastSessionAsync(Session);
+            await DiscoveryRepository.SetLastMcpServerUrlAsync(McpServerUrl);
+            SelectedAuthorizationServerIndex = Session.SelectedAuthorizationServerIndex;
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+        finally
+        {
+            IsDiscovering = false;
+        }
+    }
+
+    private async Task RediscoverWithSelectedAsAsync()
+    {
+        if (Session?.ProtectedResourceMetadata is null
+            || SelectedAuthorizationServerIndex == Session.SelectedAuthorizationServerIndex)
+        {
+            return;
+        }
+
+        await DiscoverAsync();
+    }
+
+    private async Task SendToBuilderAsync()
+    {
+        if (Session is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await DiscoveryBridge.ApplyToBuilderAsync(Session);
+            NavigationManager.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Error = ex.Message;
+        }
+    }
+
+    private async Task ExportJsonAsync()
+    {
+        if (Session is null)
+        {
+            return;
+        }
+
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            Session,
+            new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", json);
+    }
+
+    private static string FormatCimd(bool? supported) => supported switch
+    {
+        true => "supported",
+        false => "not supported",
+        _ => "unknown"
+    };
+}

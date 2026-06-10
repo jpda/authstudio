@@ -23,6 +23,11 @@ public static class TokenEndpointClient
             new("code_verifier", pkceChallenge.CodeVerifier)
         };
 
+        if (!string.IsNullOrWhiteSpace(authorizeParameters.Resource))
+        {
+            data.Add(new KeyValuePair<string, string>("resource", authorizeParameters.Resource));
+        }
+
         var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
         {
             Content = new FormUrlEncodedContent(data)

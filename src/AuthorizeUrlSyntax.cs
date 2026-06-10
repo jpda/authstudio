@@ -7,6 +7,7 @@ public static class AuthorizeUrlSyntax
     public const string RedirectUri = "url-redirect-uri";
     public const string Pkce = "url-pkce";
     public const string OAuth = "url-oauth";
+    public const string Resource = "url-resource";
     public const string Par = "url-par";
     public const string Other = "url-other";
 
@@ -17,6 +18,7 @@ public static class AuthorizeUrlSyntax
         "response_type",
         "response_mode",
         "scope",
+        "resource",
         "code_challenge",
         "code_challenge_method",
         "state",
@@ -29,6 +31,7 @@ public static class AuthorizeUrlSyntax
         "redirect_uri" => RedirectUri,
         "code_challenge" or "code_challenge_method" => Pkce,
         "scope" or "response_type" or "response_mode" or "state" => OAuth,
+        "resource" => Resource,
         "request_uri" => Par,
         _ => Other
     };

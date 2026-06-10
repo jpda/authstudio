@@ -38,6 +38,7 @@ public class AuthorizeParameterModel {
     public string ScopeParameter { get { return string.Join(' ', Scopes); } set { Scopes.Clear(); Scopes.AddRange(value.Split(' ')); } }
     public string ResponseType { get; set; } = "code";
     public string ResponseMode { get; set; } = "";
+    public string Resource { get; set; } = "";
     public bool UsePushedAuthorization { get; set; }
 }
 

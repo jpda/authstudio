@@ -27,6 +27,7 @@
     --url-redirect-uri: #be185d;
     --url-pkce: #c2410c;
     --url-oauth: #1d4ed8;
+    --url-resource: #0369a1;
     --url-par: #7c2d12;
     --as-radius: 6px;
     --as-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -61,6 +62,7 @@
     --url-redirect-uri: #f9a8d4;
     --url-pkce: #fdba74;
     --url-oauth: #93c5fd;
+    --url-resource: #7dd3fc;
     --url-par: #fdba74;
 }
 
@@ -70,6 +72,12 @@ body {
     font-size: 14px;
     color: var(--as-text);
     background: var(--as-bg);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
 h1:focus {
@@ -169,9 +177,13 @@ textarea.form-control {
 .input-group {
     display: flex;
     width: 100%;
+    min-width: 0;
 }
 
 .input-group .form-control {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
@@ -379,6 +391,7 @@ textarea.form-control {
     display: flex;
     flex-direction: column;
     gap: 0.625rem;
+    min-width: 0;
 }
 
 .panel {
@@ -386,6 +399,7 @@ textarea.form-control {
     border: 1px solid var(--as-border);
     border-radius: var(--as-radius);
     padding: 0.75rem;
+    min-width: 0;
 }
 
 .panel-output {
@@ -505,6 +519,10 @@ textarea.form-control {
     align-items: center;
 }
 
+.field-grid > *:not(label) {
+    min-width: 0;
+}
+
 .field-grid label {
     font-size: 0.8125rem;
     color: var(--as-muted);
@@ -573,6 +591,10 @@ textarea.form-control {
     --url-param-color: var(--url-oauth);
 }
 
+.url-param.url-resource {
+    --url-param-color: var(--url-resource);
+}
+
 .url-param.url-par {
     --url-param-color: var(--url-par);
 }
@@ -636,6 +658,10 @@ textarea.form-control {
     color: var(--url-oauth);
 }
 
+.url-legend .url-resource {
+    color: var(--url-resource);
+}
+
 .url-legend .url-par {
     color: var(--url-par);
 }
@@ -658,6 +684,11 @@ textarea.form-control {
 .param-row.url-oauth {
     --url-param-color: var(--url-oauth);
     background: color-mix(in srgb, var(--url-oauth) 10%, transparent);
+}
+
+.param-row.url-resource {
+    --url-param-color: var(--url-resource);
+    background: color-mix(in srgb, var(--url-resource) 10%, transparent);
 }
 
 .param-row.url-par {
@@ -888,6 +919,87 @@ input[readonly].form-control {
 .workspace-preset-bar {
     margin-bottom: 0.75rem;
 }
+
+.mcp-discovery-timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.75rem;
+}
+
+.mcp-discovery-step {
+    border: 1px solid var(--as-border);
+    border-radius: var(--as-radius);
+    padding: 0.75rem;
+    background: var(--as-inset-bg);
+}
+
+.mcp-discovery-step-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: baseline;
+    margin-bottom: 0.25rem;
+}
+
+.mcp-discovery-step-title {
+    font-weight: 650;
+}
+
+.mcp-discovery-step-status {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--as-muted);
+}
+
+.mcp-step-success { border-color: color-mix(in srgb, #15803d 35%, var(--as-border)); }
+.mcp-step-warning { border-color: color-mix(in srgb, #b45309 35%, var(--as-border)); }
+.mcp-step-failed { border-color: color-mix(in srgb, #b91c1c 35%, var(--as-border)); }
+
+.mcp-checklist,
+.mcp-checklist-compact {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.375rem;
+}
+
+.mcp-checklist li,
+.mcp-checklist-compact li {
+    display: grid;
+    gap: 0.125rem;
+}
+
+.mcp-checklist-compact li {
+    grid-template-columns: minmax(8rem, 12rem) 1fr;
+    align-items: start;
+}
+
+.mcp-check-title {
+    font-weight: 600;
+    font-size: 0.8125rem;
+}
+
+.mcp-check-message {
+    font-size: 0.8125rem;
+    color: var(--as-text);
+}
+
+.mcp-check-spec {
+    font-size: 0.75rem;
+    color: var(--as-muted);
+}
+
+.mcp-check-success .mcp-check-title { color: #15803d; }
+.mcp-check-warning .mcp-check-title { color: #b45309; }
+.mcp-check-failed .mcp-check-title { color: #b91c1c; }
+
+[data-theme="dark"] .mcp-check-success .mcp-check-title { color: #86efac; }
+[data-theme="dark"] .mcp-check-warning .mcp-check-title { color: #fdba74; }
+[data-theme="dark"] .mcp-check-failed .mcp-check-title { color: #fca5a5; }
 
 .workspace-preset-bar .panel-actions {
     margin-top: 0;

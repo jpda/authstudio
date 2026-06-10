@@ -1,0 +1,91 @@
+@if (Steps.Count == 0)
+{
+    <p class="panel-hint mb-0">Run discovery to inspect each step a compliant MCP client would perform.</p>
+}
+else
+{
+    <ol class="mcp-discovery-timeline">
+        @foreach (var step in Steps)
+        {
+            <li class="mcp-discovery-step @StatusClass(step.Status)">
+                <div class="mcp-discovery-step-header">
+                    <span class="mcp-discovery-step-title">@step.Title</span>
+                    <span class="mcp-discovery-step-status">@StatusLabel(step.Status)</span>
+                </div>
+
+                @if (!string.IsNullOrEmpty(step.Description))
+                {
+                    <p class="panel-hint mb-1">@step.Description</p>
+                }
+
+                @if (!string.IsNullOrEmpty(step.RequestUrl))
+                {
+                    <p class="panel-hint mb-1">
+                        <span class="mono">@step.RequestMethod @step.RequestUrl</span>
+                        @if (step.FetchVia is not null)
+                        {
+                            <span> · via @step.FetchVia</span>
+                        }
+                        @if (step.ResponseStatusCode is not null)
+                        {
+                            <span> · HTTP @step.ResponseStatusCode</span>
+                        }
+                    </p>
+                }
+
+                @if (step.Checks.Count > 0)
+                {
+                    <McpComplianceChecklist Checks="step.Checks" Compact="true" />
+                }
+
+                @if (step.Notes.Count > 0)
+                {
+                    <ul class="panel-hint-list mb-1">
+                        @foreach (var note in step.Notes)
+                        {
+                            <li class="mono">@note</li>
+                        }
+                    </ul>
+                }
+
+                @if (!string.IsNullOrEmpty(step.ResponseHeaders))
+                {
+                    <details class="jwt-claims-details">
+                        <summary>Response headers</summary>
+                        <pre class="mono url-display mb-0">@step.ResponseHeaders</pre>
+                    </details>
+                }
+
+                @if (!string.IsNullOrEmpty(step.ResponseBody))
+                {
+                    <details class="jwt-claims-details mt-1">
+                        <summary>Response body</summary>
+                        <pre class="mono url-display mb-0">@step.ResponseBody</pre>
+                    </details>
+                }
+            </li>
+        }
+    </ol>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<DiscoveryStep> Steps { get; set; } = Array.Empty<DiscoveryStep>();
+
+    private static string StatusClass(DiscoveryStepStatus status) => status switch
+    {
+        DiscoveryStepStatus.Success => "mcp-step-success",
+        DiscoveryStepStatus.Warning => "mcp-step-warning",
+        DiscoveryStepStatus.Failed => "mcp-step-failed",
+        _ => "mcp-step-info"
+    };
+
+    private static string StatusLabel(DiscoveryStepStatus status) => status switch
+    {
+        DiscoveryStepStatus.Success => "pass",
+        DiscoveryStepStatus.Warning => "warn",
+        DiscoveryStepStatus.Failed => "fail",
+        DiscoveryStepStatus.Skipped => "skip",
+        _ => "info"
+    };
+}

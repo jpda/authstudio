@@ -9,6 +9,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddSingleton<CryptoInteropService>();
+builder.Services.AddScoped<DiscoveryFetchService>();
+builder.Services.AddScoped<McpDiscoveryOrchestrator>();
+builder.Services.AddScoped<McpDiscoveryBridgeService>();
+builder.Services.AddScoped<IMcpDiscoveryRepository, LocalStorageMcpDiscoveryRepository>();
 builder.Services.AddScoped<OAuthBuilderActions>();
 builder.Services.AddScoped<ClientAssertionService>();
 builder.Services.AddScoped<JweDecryptionService>();
@@ -22,5 +26,6 @@ builder.Services.AddScoped<ITransientRepository, LocalStorageTransientRepository
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddHttpClient("AuthClient");
+builder.Services.AddHttpClient("DiscoveryClient");
 
 await builder.Build().RunAsync();

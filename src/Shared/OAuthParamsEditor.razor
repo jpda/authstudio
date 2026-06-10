@@ -10,6 +10,10 @@
         <InputText id="scope" class="form-control form-control-sm" @bind-Value="AuthorizeParameters.ScopeParameter"
             @bind-Value:after="PersistAuthorizeParameters" />
 
+        <label for="resource">Resource</label>
+        <InputText id="resource" class="form-control form-control-sm mono" @bind-Value="AuthorizeParameters.Resource"
+            @bind-Value:after="PersistAuthorizeParameters" placeholder="https://mcp.example.com/mcp" />
+
         <label for="responseType">Response type</label>
         <InputText id="responseType" class="form-control form-control-sm"
             @bind-Value="AuthorizeParameters.ResponseType" @bind-Value:after="PersistAuthorizeParameters" />

@@ -23,6 +23,11 @@ public static class OAuthAuthorizationClient
             parameters["response_mode"] = request.AuthorizeParameters.ResponseMode;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.AuthorizeParameters.Resource))
+        {
+            parameters["resource"] = request.AuthorizeParameters.Resource;
+        }
+
         return parameters;
     }
 
