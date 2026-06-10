@@ -1,12 +1,5 @@
 namespace authstudio;
 
-public class StoredEntity
-{
-    public string Id { get; set; } = "";
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
-
-}
-
 public class IssuerModel
 {
     public string Issuer { get; set; } = "";

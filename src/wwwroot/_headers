@@ -1,5 +1,23 @@
 /_framework/*
   Cache-Control: public, max-age=31536000, immutable
 
+/_framework/*.wasm
+  Content-Type: application/wasm
+
+/_framework/*.wasm.br
+  Content-Encoding: br
+  Content-Type: application/wasm
+
+/_framework/*.dll.br
+  Content-Encoding: br
+
+/_framework/*.js.br
+  Content-Encoding: br
+  Content-Type: application/javascript
+
+/_framework/blazor.boot.json.br
+  Content-Encoding: br
+  Content-Type: application/json
+
 /
   Cache-Control: no-cache
