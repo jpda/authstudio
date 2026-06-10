@@ -3,9 +3,12 @@
 @inject ITransientRepository TransientRepository
 @inject NavigationManager NavigationManager
 @inject OAuthBuilderActions BuilderActions
+@inject WorkspacePresetService WorkspacePresets
 @implements IDisposable
 
 <PageTitle>Builder</PageTitle>
+
+<WorkspacePresetBar ClientApp="ClientApp" ClientAppChanged="HandleClientAppChanged" />
 
 <div class="builder-grid">
     <div class="builder-config">
@@ -46,10 +49,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Issuer = await SettingsRepository.GetIssuerModelAsync() ?? Issuer;
-        PkceChallenge = await SettingsRepository.GetPkceChallengeModelAsync() ?? PkceChallenge;
-        ClientApp = await SettingsRepository.GetClientAppModelAsync() ?? ClientApp;
-        AuthorizeParameters = await SettingsRepository.GetAuthorizeParameterModelAsync() ?? AuthorizeParameters;
+        var issuerTask = SettingsRepository.GetIssuerModelAsync();
+        var pkceTask = SettingsRepository.GetPkceChallengeModelAsync();
+        var clientTask = SettingsRepository.GetClientAppModelAsync();
+        var paramsTask = SettingsRepository.GetAuthorizeParameterModelAsync();
+        await Task.WhenAll(issuerTask, pkceTask, clientTask, paramsTask);
+
+        Issuer = await issuerTask ?? Issuer;
+        PkceChallenge = await pkceTask ?? PkceChallenge;
+        ClientApp = await clientTask ?? ClientApp;
+        AuthorizeParameters = await paramsTask ?? AuthorizeParameters;
 
         await ApplyCimdClientIdIfNeeded();
 

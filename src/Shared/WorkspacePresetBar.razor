@@ -1,0 +1,57 @@
+@inject WorkspacePresetService WorkspacePresets
+
+<section class="panel workspace-preset-bar">
+    <div class="panel-header">
+        <h2 class="panel-title">Workspace</h2>
+        <span class="preset-active mono">@ActivePresetLabel</span>
+    </div>
+    <div class="panel-actions">
+        <button type="button" class="btn btn-sm @(ActivePreset == WorkspacePreset.PublicCimd ? "btn-primary" : "btn-outline-secondary")"
+            @onclick="() => ApplyPreset(WorkspacePreset.PublicCimd)">Public CIMD</button>
+        <button type="button" class="btn btn-sm @(ActivePreset == WorkspacePreset.PrivateCimd ? "btn-primary" : "btn-outline-secondary")"
+            @onclick="() => ApplyPreset(WorkspacePreset.PrivateCimd)">Private CIMD</button>
+        <button type="button" class="btn btn-sm @(ActivePreset == WorkspacePreset.Custom ? "btn-primary" : "btn-outline-secondary")"
+            @onclick="() => ApplyPreset(WorkspacePreset.Custom)">Custom</button>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public ClientAppModel ClientApp { get; set; } = new();
+
+    [Parameter, EditorRequired]
+    public EventCallback<ClientAppModel> ClientAppChanged { get; set; }
+
+    private WorkspacePreset ActivePreset { get; set; } = WorkspacePreset.Custom;
+
+    private string ActivePresetLabel => ActivePreset switch
+    {
+        WorkspacePreset.PublicCimd => "public CIMD",
+        WorkspacePreset.PrivateCimd => "private_key_jwt CIMD",
+        _ => "custom"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        ActivePreset = await WorkspacePresets.GetActivePresetAsync();
+    }
+
+    private async Task ApplyPreset(WorkspacePreset preset)
+    {
+        ActivePreset = preset;
+        switch (preset)
+        {
+            case WorkspacePreset.PublicCimd:
+                ClientApp = await WorkspacePresets.ApplyPublicCimdAsync(ClientApp);
+                break;
+            case WorkspacePreset.PrivateCimd:
+                ClientApp = await WorkspacePresets.ApplyPrivateCimdAsync(ClientApp);
+                break;
+            case WorkspacePreset.Custom:
+                await WorkspacePresets.MarkCustomAsync();
+                break;
+        }
+
+        await ClientAppChanged.InvokeAsync(ClientApp);
+    }
+}

@@ -3,6 +3,7 @@
 @inject NavigationManager NavigationManager
 @inject ITransientRepository TransientRepository
 @inject ClientAssertionService ClientAssertionService
+@inject IWorkspaceSessionRepository WorkspaceSession
 
 <PageTitle>Callback</PageTitle>
 
@@ -56,7 +57,23 @@
             <pre class="mono url-display mb-0">@Response</pre>
         </section>
     }
+    @if (!string.IsNullOrEmpty(LastClientAssertion))
+    {
+        <section class="panel mt-2">
+            <h2 class="panel-title">Last client assertion</h2>
+            <div class="url-display mono mb-2">@LastClientAssertion</div>
+            <JwtInspector Jwt="@LastClientAssertion" Label="client assertion" />
+        </section>
+    }
 }
+
+<section class="panel mt-2">
+    <h2 class="panel-title">Next round trip</h2>
+    <p class="panel-hint mb-2">
+        Start a fresh PKCE flow from the builder. Authorize regenerates the verifier and state automatically.
+    </p>
+    <a href="" class="btn btn-primary btn-sm">New authorize</a>
+</section>
 
 @if (!string.IsNullOrEmpty(Tokens.IdToken) || !string.IsNullOrEmpty(Tokens.AccessToken) ||
 !string.IsNullOrEmpty(Tokens.RefreshToken))
@@ -94,6 +111,7 @@
     public string? RedeemErrorUri { get; set; }
     public int TokenStatusCode { get; set; }
     public bool IsRedeeming { get; set; }
+    public string LastClientAssertion { get; set; } = "";
 
     private AuthorizeRequestModel OriginalRequest = new AuthorizeRequestModel();
     public TokenResponseModel Tokens { get; set; } = new TokenResponseModel();
@@ -120,6 +138,7 @@
         }
 
         await base.OnInitializedAsync();
+        LastClientAssertion = await WorkspaceSession.GetLastClientAssertionAsync() ?? "";
     }
 
     private async Task RedeemCode()
@@ -160,6 +179,8 @@
                     OriginalRequest.Issuer.TokenEndpoint,
                     OriginalRequest.ClientApp.SigningPrivateKeyJwk,
                     OriginalRequest.ClientApp.SigningAlgorithm);
+                LastClientAssertion = clientAssertion;
+                await WorkspaceSession.SetLastClientAssertionAsync(clientAssertion);
             }
 
             using var request = TokenEndpointClient.BuildTokenRequest(
