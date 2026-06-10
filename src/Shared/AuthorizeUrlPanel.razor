@@ -2,7 +2,7 @@
 
 <section class="panel panel-output">
     <div class="panel-header">
-        <h2 class="panel-title">Authorize URL</h2>
+        <h2 class="panel-title">@(Request.UsesPar ? "Authorize (PAR)" : "Authorize URL")</h2>
         <div class="panel-actions">
             <button type="button" class="btn btn-outline-secondary btn-sm" title="Copy URL"
                 @onclick="CopyUrl">Copy</button>
@@ -22,55 +22,33 @@
             <li class="@AuthorizeUrlSyntax.RedirectUri">Redirect URI</li>
             <li class="@AuthorizeUrlSyntax.Pkce">PKCE</li>
             <li class="@AuthorizeUrlSyntax.OAuth">Request parameters</li>
+            @if (Request.UsesPar)
+            {
+                <li class="@AuthorizeUrlSyntax.Par">PAR</li>
+            }
         </ul>
 
         <div class="authorize-url-body" @onmouseleave="ClearFocus">
-            <div class="url-display mono url-colored">
-                <span class="@($"{AuthorizeUrlSyntax.Issuer} {FocusClass(IssuerKey)}")"
-                    @onmouseenter="() => SetFocus(IssuerKey)">@BaseUrl</span>@if (OrderedParameters.Count > 0)
-                {
-                    <span class="url-punct @PunctFocusClass()">?</span>
-                    @for (var index = 0; index < OrderedParameters.Count; index++)
-                    {
-                        var param = OrderedParameters[index];
-                        if (index > 0)
-                        {
-                            <span class="url-punct @PunctFocusClass()">&amp;</span>
-                        }
+            @if (Request.UsesPar)
+            {
+                <p class="panel-hint">
+                    Push parameters to
+                    <code class="mono">@Request.Issuer.PushedAuthorizationRequestEndpoint</code>, then open the
+                    front-channel URL with the returned <code>request_uri</code>.
+                </p>
 
-                        <span class="url-param @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
-                            @onmouseenter="() => SetFocus(param.Key)">
-                            <span class="url-key">@param.Key</span><span class="url-punct @PunctFocusClass()">=</span><span
-                                class="url-value">@param.Value</span>
-                        </span>
-                    }
-                }
-            </div>
+                <h3 class="panel-subtitle">Front-channel authorize URL</h3>
+                @RenderColoredUrl(FrontChannelUrl, FrontChannelParameters)
 
-            <h3 class="panel-subtitle">Query parameters</h3>
-            <table class="param-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Value</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var param in OrderedParameters)
-                    {
-                        <tr class="param-row @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
-                            @onmouseenter="() => SetFocus(param.Key)">
-                            <td class="mono param-name">@param.Key</td>
-                            <td class="mono param-value">@param.Value</td>
-                            <td class="param-copy">
-                                <button type="button" class="btn btn-outline-secondary btn-sm py-0"
-                                    title="Copy value" @onclick="() => CopyValue(param.Value)">⎘</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                <h3 class="panel-subtitle">PAR push parameters</h3>
+                @RenderParameterTable(ParPushParameters)
+            }
+            else
+            {
+                @RenderColoredUrl(DirectAuthorizeUrl, DirectParameters)
+                <h3 class="panel-subtitle">Query parameters</h3>
+                @RenderParameterTable(DirectParameters)
+            }
         </div>
     }
 </section>
@@ -86,20 +64,24 @@
 
     private string? _focusedKey;
 
-    private string? BaseUrl => AuthorizeUrlSyntax.GetBaseUrl(Request.AuthorizeUrl);
+    private string DirectAuthorizeUrl => OAuthAuthorizationClient.BuildDirectAuthorizeUrl(Request);
 
-    private IReadOnlyList<KeyValuePair<string, string>> OrderedParameters =>
-        AuthorizeUrlSyntax.OrderParameters(Request.GetQueryParameters());
+    private string FrontChannelUrl => string.IsNullOrEmpty(Request.PushedRequestUri)
+        ? Request.PreviewAuthorizeUrl
+        : OAuthAuthorizationClient.BuildFrontChannelAuthorizeUrl(Request, Request.PushedRequestUri);
 
-    private void SetFocus(string key)
-    {
-        _focusedKey = key;
-    }
+    private IReadOnlyList<KeyValuePair<string, string>> DirectParameters =>
+        AuthorizeUrlSyntax.OrderParameters(Request.GetQueryParameters(DirectAuthorizeUrl));
 
-    private void ClearFocus()
-    {
-        _focusedKey = null;
-    }
+    private IReadOnlyList<KeyValuePair<string, string>> FrontChannelParameters =>
+        AuthorizeUrlSyntax.OrderParameters(Request.GetQueryParameters(FrontChannelUrl));
+
+    private IReadOnlyList<KeyValuePair<string, string>> ParPushParameters =>
+        AuthorizeUrlSyntax.OrderParameters(Request.GetParPushParameters());
+
+    private void SetFocus(string key) => _focusedKey = key;
+
+    private void ClearFocus() => _focusedKey = null;
 
     private string FocusClass(string key) =>
         _focusedKey is null ? ""
@@ -110,11 +92,63 @@
 
     private async Task CopyUrl()
     {
-        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", Request.AuthorizeUrl);
+        var url = Request.UsesPar ? FrontChannelUrl : DirectAuthorizeUrl;
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", url);
     }
 
     private async Task CopyValue(string value)
     {
         await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", value);
     }
+
+    private RenderFragment RenderColoredUrl(string url, IReadOnlyList<KeyValuePair<string, string>> parameters) =>
+        @<div class="url-display mono url-colored">
+            @{
+                var baseUrl = AuthorizeUrlSyntax.GetBaseUrl(url);
+            }
+            <span class="@($"{AuthorizeUrlSyntax.Issuer} {FocusClass(IssuerKey)}")"
+                @onmouseenter="() => SetFocus(IssuerKey)">@baseUrl</span>@if (parameters.Count > 0)
+            {
+                <span class="url-punct @PunctFocusClass()">?</span>
+                @for (var index = 0; index < parameters.Count; index++)
+                {
+                    var param = parameters[index];
+                    if (index > 0)
+                    {
+                        <span class="url-punct @PunctFocusClass()">&amp;</span>
+                    }
+
+                    <span class="url-param @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
+                        @onmouseenter="() => SetFocus(param.Key)">
+                        <span class="url-key">@param.Key</span><span class="url-punct @PunctFocusClass()">=</span><span
+                            class="url-value">@param.Value</span>
+                    </span>
+                }
+            }
+        </div>;
+
+    private RenderFragment RenderParameterTable(IReadOnlyList<KeyValuePair<string, string>> parameters) =>
+        @<table class="param-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Value</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var param in parameters)
+                {
+                    <tr class="param-row @AuthorizeUrlSyntax.GetCategory(param.Key) @FocusClass(param.Key)"
+                        @onmouseenter="() => SetFocus(param.Key)">
+                        <td class="mono param-name">@param.Key</td>
+                        <td class="mono param-value">@param.Value</td>
+                        <td class="param-copy">
+                            <button type="button" class="btn btn-outline-secondary btn-sm py-0"
+                                title="Copy value" @onclick="() => CopyValue(param.Value)">⎘</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>;
 }

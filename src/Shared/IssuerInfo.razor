@@ -4,10 +4,15 @@
 <section class="panel">
     <div class="panel-header">
         <h2 class="panel-title">Issuer</h2>
-        <button type="button" class="cimd-badge @CimdBadgeClass" disabled="@IsFetching"
-            title="@CimdBadgeTitle" @onclick="RefreshDiscoveryAsync">
-            @CimdBadgeLabel
-        </button>
+        <div class="panel-actions">
+            <button type="button" class="cimd-badge @ParBadgeClass" disabled="@IsFetching" title="@ParBadgeTitle">
+                @ParBadgeLabel
+            </button>
+            <button type="button" class="cimd-badge @CimdBadgeClass" disabled="@IsFetching"
+                title="@CimdBadgeTitle" @onclick="RefreshDiscoveryAsync">
+                @CimdBadgeLabel
+            </button>
+        </div>
     </div>
 
     @if (!string.IsNullOrEmpty(FetchError))
@@ -79,6 +84,24 @@
         ? "Fetching issuer configuration…"
         : "Click to refresh OpenID configuration and re-check CIMD support (client_id_metadata_document_supported)";
 
+    private string ParBadgeLabel => IsFetching ? "PAR …" : Issuer.PushedAuthorizationRequestEndpoint switch
+    {
+        not "" => "PAR supported",
+        _ => "PAR not advertised"
+    };
+
+    private string ParBadgeClass => IsFetching ? "cimd-checking" : Issuer.PushedAuthorizationRequestEndpoint switch
+    {
+        not "" => "cimd-yes",
+        _ => "cimd-no"
+    };
+
+    private string ParBadgeTitle => IsFetching
+        ? "Fetching issuer configuration…"
+        : string.IsNullOrEmpty(Issuer.PushedAuthorizationRequestEndpoint)
+            ? "No pushed_authorization_request_endpoint in discovery metadata"
+            : Issuer.PushedAuthorizationRequestEndpoint;
+
     private async Task RefreshDiscoveryAsync()
     {
         await FetchOpenIdConfiguration();
@@ -110,6 +133,8 @@
             Issuer.UserInfoEndpoint = config.UserInfoEndpoint;
             Issuer.JwksUri = config.JwksUri;
             Issuer.IntrospectionEndpoint = config.IntrospectionEndpoint;
+            Issuer.PushedAuthorizationRequestEndpoint = config.PushedAuthorizationRequestEndpoint;
+            Issuer.RequirePushedAuthorizationRequests = config.RequirePushedAuthorizationRequests;
             Issuer.ClientIdMetadataDocumentSupported = config.ClientIdMetadataDocumentSupported;
             Issuer.ConfigurationUri = string.Empty;
             await SettingsRepository.SetIssuerModelAsync(Issuer);

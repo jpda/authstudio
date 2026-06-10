@@ -1,5 +1,4 @@
 using System.Net.Http.Headers;
-using System.Text;
 using System.Text.Json;
 
 namespace authstudio;
@@ -29,7 +28,7 @@ public static class TokenEndpointClient
             Content = new FormUrlEncodedContent(data)
         };
 
-        ApplyClientAuthentication(request, client, data, clientAssertion);
+        OAuthClientAuthentication.Apply(request, client, data, clientAssertion);
         return request;
     }
 
@@ -78,30 +77,6 @@ public static class TokenEndpointClient
         result.IsSuccess = true;
         result.Tokens = tokens;
         return result;
-    }
-
-    private static void ApplyClientAuthentication(
-        HttpRequestMessage request,
-        ClientAppModel client,
-        List<KeyValuePair<string, string>> data,
-        string? clientAssertion)
-    {
-        switch (client.TokenAuthMethod)
-        {
-            case TokenClientAuthMethod.ClientSecretPost when !string.IsNullOrEmpty(client.ClientSecret):
-                data.Add(new KeyValuePair<string, string>("client_secret", client.ClientSecret));
-                request.Content = new FormUrlEncodedContent(data);
-                break;
-            case TokenClientAuthMethod.ClientSecretBasic when !string.IsNullOrEmpty(client.ClientSecret):
-                var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{client.ClientId}:{client.ClientSecret}"));
-                request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-                break;
-            case TokenClientAuthMethod.PrivateKeyJwt when !string.IsNullOrEmpty(clientAssertion):
-                data.Add(new KeyValuePair<string, string>("client_assertion_type", PrivateKeyJwtGenerator.ClientAssertionType));
-                data.Add(new KeyValuePair<string, string>("client_assertion", clientAssertion));
-                request.Content = new FormUrlEncodedContent(data);
-                break;
-        }
     }
 }
 

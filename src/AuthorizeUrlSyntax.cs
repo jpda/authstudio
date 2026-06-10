@@ -7,6 +7,7 @@ public static class AuthorizeUrlSyntax
     public const string RedirectUri = "url-redirect-uri";
     public const string Pkce = "url-pkce";
     public const string OAuth = "url-oauth";
+    public const string Par = "url-par";
     public const string Other = "url-other";
 
     private static readonly string[] ParameterOrder =
@@ -14,10 +15,12 @@ public static class AuthorizeUrlSyntax
         "client_id",
         "redirect_uri",
         "response_type",
+        "response_mode",
         "scope",
         "code_challenge",
         "code_challenge_method",
-        "state"
+        "state",
+        "request_uri"
     ];
 
     public static string GetCategory(string parameterName) => parameterName switch
@@ -25,7 +28,8 @@ public static class AuthorizeUrlSyntax
         "client_id" => ClientId,
         "redirect_uri" => RedirectUri,
         "code_challenge" or "code_challenge_method" => Pkce,
-        "scope" or "response_type" or "state" => OAuth,
+        "scope" or "response_type" or "response_mode" or "state" => OAuth,
+        "request_uri" => Par,
         _ => Other
     };
 

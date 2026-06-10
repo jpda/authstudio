@@ -13,6 +13,8 @@ public class IssuerModel
     public string UserInfoEndpoint { get; set; } = "";
     public string JwksUri { get; set; } = "";
     public string IntrospectionEndpoint { get; set; } = "";
+    public string PushedAuthorizationRequestEndpoint { get; set; } = "";
+    public bool RequirePushedAuthorizationRequests { get; set; }
 
     private string _configurationUri = "";
     public string ConfigurationUri { get { return string.IsNullOrEmpty(_configurationUri) ? AutoConfigurationUri : _configurationUri; } set { _configurationUri = value; } }
@@ -35,53 +37,52 @@ public class AuthorizeParameterModel {
     public List<string> Scopes { get; set; } = new List<string> { "openid", "profile" };
     public string ScopeParameter { get { return string.Join(' ', Scopes); } set { Scopes.Clear(); Scopes.AddRange(value.Split(' ')); } }
     public string ResponseType { get; set; } = "code";
+    public string ResponseMode { get; set; } = "";
+    public bool UsePushedAuthorization { get; set; }
 }
 
 public class AuthorizeRequestModel
 {
-    // todo: put cascade here? or too opaque?
     public string Id { get; set; } = Guid.NewGuid().ToString("N");
     public IssuerModel Issuer { get; set; } = new IssuerModel();
     public ClientAppModel ClientApp { get; set; } = new ClientAppModel();
     public PkceChallengeModel PkceChallenge { get; set; } = new PkceChallengeModel();
     public AuthorizeParameterModel AuthorizeParameters { get; set; } = new AuthorizeParameterModel();
+    public string? PushedRequestUri { get; set; }
 
-    public string AuthorizeUrl
+    public bool CanUsePar =>
+        !string.IsNullOrEmpty(Issuer.PushedAuthorizationRequestEndpoint);
+
+    public bool UsesPar =>
+        AuthorizeParameters.UsePushedAuthorization && CanUsePar;
+
+    public string AuthorizeUrl => UsesPar && !string.IsNullOrEmpty(PushedRequestUri)
+        ? OAuthAuthorizationClient.BuildFrontChannelAuthorizeUrl(this, PushedRequestUri)
+        : OAuthAuthorizationClient.BuildDirectAuthorizeUrl(this);
+
+    public string PreviewAuthorizeUrl => UsesPar
+        ? OAuthAuthorizationClient.BuildFrontChannelAuthorizeUrl(this, "urn:ietf:params:oauth:request_uri:…")
+        : OAuthAuthorizationClient.BuildDirectAuthorizeUrl(this);
+
+    public IReadOnlyList<KeyValuePair<string, string>> GetQueryParameters(string? url = null)
     {
-        get
-        {
-            if (string.IsNullOrEmpty(Issuer.AuthorizeEndpoint))
-            {
-                return "";
-            }
-
-            var authorizeParameters = new Dictionary<string, string?>
-            {
-                { "client_id", ClientApp.ClientId },
-                { "redirect_uri", ClientApp.RedirectUri },
-                { "response_type", AuthorizeParameters.ResponseType },
-                { "scope", AuthorizeParameters.ScopeParameter },
-                { "code_challenge", PkceChallenge.CodeChallenge },
-                { "code_challenge_method", PkceChallenge.CodeChallengeMethod.ToString() },
-                { "state", Id }
-            };
-            return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(Issuer.AuthorizeEndpoint, authorizeParameters);
-        }
-        set { }
-    }
-
-    public IReadOnlyList<KeyValuePair<string, string>> GetQueryParameters()
-    {
-        if (string.IsNullOrEmpty(AuthorizeUrl))
+        var authorizeUrl = url ?? AuthorizeUrl;
+        if (string.IsNullOrEmpty(authorizeUrl))
         {
             return Array.Empty<KeyValuePair<string, string>>();
         }
 
-        var query = new Uri(AuthorizeUrl).Query;
+        var query = new Uri(authorizeUrl).Query;
         return Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(query)
             .SelectMany(pair => pair.Value.Select(value => new KeyValuePair<string, string>(pair.Key, value ?? "")))
             .ToList();
     }
+
+    public IReadOnlyList<KeyValuePair<string, string>> GetParPushParameters() =>
+        OAuthAuthorizationClient.BuildAuthorizeParameters(this)
+            .Where(pair => !string.IsNullOrEmpty(pair.Value))
+            .Select(pair => new KeyValuePair<string, string>(pair.Key, pair.Value!))
+            .ToList();
 }
 
 public class RedeemCodeModel

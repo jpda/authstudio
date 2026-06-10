@@ -4,11 +4,17 @@
 @inject NavigationManager NavigationManager
 @inject OAuthBuilderActions BuilderActions
 @inject WorkspacePresetService WorkspacePresets
+@inject PushedAuthorizationRequestService ParService
 @implements IDisposable
 
 <PageTitle>Builder</PageTitle>
 
 <WorkspacePresetBar ClientApp="ClientApp" ClientAppChanged="HandleClientAppChanged" />
+
+@if (!string.IsNullOrEmpty(AuthorizeError))
+{
+    <ErrorAlert Title="Authorize failed" Message="@AuthorizeError" Variant="danger" />
+}
 
 <div class="builder-grid">
     <div class="builder-config">
@@ -16,6 +22,8 @@
         <ClientAppInfo Issuer="Issuer" ClientApp="ClientApp" ClientAppChanged="HandleClientAppChanged" />
         <PkceChallenge @bind-Pkce="PkceChallenge" />
         <OAuthParamsEditor RequestId="@RequestId" AuthorizeParameters="AuthorizeParameters"
+            ParAvailable="@CurrentRequest.CanUsePar"
+            IssuerRequiresPar="@Issuer.RequirePushedAuthorizationRequests"
             AuthorizeParametersChanged="StateHasChanged" />
     </div>
     <div class="builder-output">
@@ -37,6 +45,7 @@
     };
 
     private string RequestId { get; set; } = Guid.NewGuid().ToString("N");
+    private string? AuthorizeError { get; set; }
 
     private AuthorizeRequestModel CurrentRequest => new()
     {
@@ -71,6 +80,12 @@
     private async Task HandleIssuerChanged(IssuerModel issuer)
     {
         Issuer = issuer;
+        if (Issuer.RequirePushedAuthorizationRequests)
+        {
+            AuthorizeParameters.UsePushedAuthorization = true;
+            await SettingsRepository.SetAuthorizeParameterModelAsync(AuthorizeParameters);
+        }
+
         await ApplyCimdClientIdIfNeeded();
     }
 
@@ -93,13 +108,29 @@
 
     private async Task StartAuthorizeAsync()
     {
+        AuthorizeError = null;
         PkceChallenge.GenerateChallenge();
         await SettingsRepository.SetPkceChallengeModelAsync(PkceChallenge);
         RequestId = Guid.NewGuid().ToString("N");
 
         var request = CurrentRequest;
+        request.PushedRequestUri = null;
         await SettingsRepository.SetAuthorizeParameterModelAsync(AuthorizeParameters);
         await TransientRepository.SetAuthorizeRequestModelAsync(request);
+
+        if (request.UsesPar)
+        {
+            var parResult = await ParService.PushAsync(request);
+            if (!parResult.IsSuccess)
+            {
+                AuthorizeError = parResult.ErrorDescription ?? parResult.Error ?? "PAR request failed.";
+                return;
+            }
+
+            request.PushedRequestUri = parResult.RequestUri;
+            await TransientRepository.SetAuthorizeRequestModelAsync(request);
+        }
+
         NavigationManager.NavigateTo(request.AuthorizeUrl);
     }
 

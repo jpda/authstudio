@@ -13,7 +13,41 @@
         <label for="responseType">Response type</label>
         <InputText id="responseType" class="form-control form-control-sm"
             @bind-Value="AuthorizeParameters.ResponseType" @bind-Value:after="PersistAuthorizeParameters" />
+
+        <label for="responseMode">Response mode</label>
+        <InputSelect id="responseMode" class="form-select form-select-sm" @bind-Value="AuthorizeParameters.ResponseMode"
+            @bind-Value:after="PersistAuthorizeParameters">
+            <option value="">Default (query)</option>
+            <option value="query">query</option>
+            <option value="fragment">fragment</option>
+            <option value="form_post">form_post</option>
+        </InputSelect>
     </div>
+
+    @if (ParAvailable)
+    {
+        <div class="panel-actions mt-2">
+            <div class="form-check">
+                <input id="usePar" class="form-check-input" type="checkbox" @bind="AuthorizeParameters.UsePushedAuthorization"
+                    @bind:after="PersistAuthorizeParameters" />
+                <label class="form-check-label" for="usePar">
+                    Push authorization request (PAR)
+                </label>
+            </div>
+        </div>
+        @if (IssuerRequiresPar)
+        {
+            <p class="panel-hint mb-0 mt-1">This issuer sets <code>require_pushed_authorization_requests</code>.</p>
+        }
+    }
+
+    @if (string.Equals(AuthorizeParameters.ResponseMode, "form_post", StringComparison.Ordinal))
+    {
+        <p class="panel-hint mb-0 mt-2">
+            <code>form_post</code> callbacks arrive as an HTTP POST. On Cloudflare Pages,
+            <code>functions/code.ts</code> relays the POST to <code>/code?…</code> so this app can read the response.
+        </p>
+    }
 </section>
 
 @code {
@@ -22,6 +56,12 @@
 
     [Parameter, EditorRequired]
     public AuthorizeParameterModel AuthorizeParameters { get; set; } = new();
+
+    [Parameter]
+    public bool ParAvailable { get; set; }
+
+    [Parameter]
+    public bool IssuerRequiresPar { get; set; }
 
     [Parameter]
     public EventCallback AuthorizeParametersChanged { get; set; }

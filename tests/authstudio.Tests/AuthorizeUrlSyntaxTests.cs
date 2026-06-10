@@ -5,6 +5,8 @@ public class AuthorizeUrlSyntaxTests
     [Theory]
     [InlineData("client_id", AuthorizeUrlSyntax.ClientId)]
     [InlineData("redirect_uri", AuthorizeUrlSyntax.RedirectUri)]
+    [InlineData("response_mode", AuthorizeUrlSyntax.OAuth)]
+    [InlineData("request_uri", AuthorizeUrlSyntax.Par)]
     [InlineData("code_challenge", AuthorizeUrlSyntax.Pkce)]
     [InlineData("scope", AuthorizeUrlSyntax.OAuth)]
     [InlineData("state", AuthorizeUrlSyntax.OAuth)]

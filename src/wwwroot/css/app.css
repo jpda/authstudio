@@ -27,6 +27,7 @@
     --url-redirect-uri: #be185d;
     --url-pkce: #c2410c;
     --url-oauth: #1d4ed8;
+    --url-par: #7c2d12;
     --as-radius: 6px;
     --as-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -60,6 +61,7 @@
     --url-redirect-uri: #f9a8d4;
     --url-pkce: #fdba74;
     --url-oauth: #93c5fd;
+    --url-par: #fdba74;
 }
 
 html,
@@ -442,6 +444,10 @@ a,
     --url-param-color: var(--url-oauth);
 }
 
+.url-param.url-par {
+    --url-param-color: var(--url-par);
+}
+
 .url-param.url-other {
     --url-param-color: var(--as-muted);
 }
@@ -501,6 +507,10 @@ a,
     color: var(--url-oauth);
 }
 
+.url-legend .url-par {
+    color: var(--url-par);
+}
+
 .param-row.url-client-id {
     --url-param-color: var(--url-client-id);
     background: color-mix(in srgb, var(--url-client-id) 10%, transparent);
@@ -519,6 +529,11 @@ a,
 .param-row.url-oauth {
     --url-param-color: var(--url-oauth);
     background: color-mix(in srgb, var(--url-oauth) 10%, transparent);
+}
+
+.param-row.url-par {
+    --url-param-color: var(--url-par);
+    background: color-mix(in srgb, var(--url-par) 10%, transparent);
 }
 
 .param-row .param-name {

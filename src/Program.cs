@@ -14,6 +14,7 @@ builder.Services.AddScoped<JweDecryptionService>();
 builder.Services.AddScoped<JwksService>();
 builder.Services.AddScoped<JwtVerificationService>();
 builder.Services.AddScoped<WorkspacePresetService>();
+builder.Services.AddScoped<PushedAuthorizationRequestService>();
 builder.Services.AddScoped<IWorkspaceSessionRepository, LocalStorageWorkspaceSessionRepository>();
 builder.Services.AddScoped<IPersistentSettingsRepository, LocalStoragePersistentSettingsRepository>();
 builder.Services.AddScoped<ITransientRepository, LocalStorageTransientRepository>();

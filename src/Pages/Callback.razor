@@ -35,6 +35,10 @@
                 <span>Signing alg</span><code class="mono">@OriginalRequest.ClientApp.SigningAlgorithm</code>
             }
             <span>Code</span><code class="mono">@Code</code>
+            @if (!string.IsNullOrEmpty(OriginalRequest.AuthorizeParameters.ResponseMode))
+            {
+                <span>Response mode</span><code class="mono">@OriginalRequest.AuthorizeParameters.ResponseMode</code>
+            }
         </div>
         <div class="mt-2">
             <button class="btn btn-primary btn-sm" @onclick="RedeemCode"
