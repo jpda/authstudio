@@ -39,6 +39,7 @@ public class AuthorizeParameterModel {
     public string ResponseType { get; set; } = "code";
     public string ResponseMode { get; set; } = "";
     public string Resource { get; set; } = "";
+    public string Prompt { get; set; } = "";
     public bool UsePushedAuthorization { get; set; }
 }
 

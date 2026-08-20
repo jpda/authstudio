@@ -26,6 +26,24 @@
             <option value="fragment">fragment</option>
             <option value="form_post">form_post</option>
         </InputSelect>
+
+        <label for="prompt">Prompt</label>
+        <div class="field-stack">
+            <select id="prompt" class="form-select form-select-sm" value="@PromptSelection"
+                @onchange="OnPromptSelectionChanged">
+                <option value="">Not sent</option>
+                @foreach (var option in KnownPrompts)
+                {
+                    <option value="@option">@option</option>
+                }
+                <option value="@CustomPrompt">Custom…</option>
+            </select>
+            @if (IsCustomPrompt)
+            {
+                <input id="promptCustom" class="form-control form-control-sm mono" placeholder="login consent"
+                    value="@AuthorizeParameters.Prompt" @onchange="OnCustomPromptChanged" />
+            }
+        </div>
     </div>
 
     @if (ParAvailable)
@@ -55,6 +73,18 @@
 </section>
 
 @code {
+    private const string CustomPrompt = "__custom__";
+
+    private static readonly string[] KnownPrompts =
+    [
+        "none",
+        "login",
+        "consent",
+        "select_account",
+        "create",
+        "login consent"
+    ];
+
     [Parameter, EditorRequired]
     public string RequestId { get; set; } = "";
 
@@ -69,6 +99,35 @@
 
     [Parameter]
     public EventCallback AuthorizeParametersChanged { get; set; }
+
+    private bool IsCustomPrompt { get; set; }
+
+    private string PromptSelection => IsCustomPrompt ? CustomPrompt : AuthorizeParameters.Prompt;
+
+    protected override void OnParametersSet()
+    {
+        IsCustomPrompt |= !string.IsNullOrEmpty(AuthorizeParameters.Prompt)
+            && !KnownPrompts.Contains(AuthorizeParameters.Prompt, StringComparer.Ordinal);
+    }
+
+    private async Task OnPromptSelectionChanged(ChangeEventArgs args)
+    {
+        var selected = args.Value?.ToString() ?? "";
+        IsCustomPrompt = selected == CustomPrompt;
+        if (IsCustomPrompt)
+        {
+            return;
+        }
+
+        AuthorizeParameters.Prompt = selected;
+        await PersistAuthorizeParameters();
+    }
+
+    private async Task OnCustomPromptChanged(ChangeEventArgs args)
+    {
+        AuthorizeParameters.Prompt = args.Value?.ToString()?.Trim() ?? "";
+        await PersistAuthorizeParameters();
+    }
 
     private async Task PersistAuthorizeParameters()
     {

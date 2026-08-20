@@ -1,0 +1,242 @@
+@page "/cimd"
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject IPersistentSettingsRepository SettingsRepository
+@inject IJSRuntime JSRuntime
+
+<PageTitle>CIMD builder</PageTitle>
+
+<h1 class="page-title">Client ID Metadata Document</h1>
+
+<p class="panel-hint">
+    Build a CIMD JSON document from the current builder client, or start from the hosted
+    <a href="@PublicCimdUrl" target="_blank" rel="noopener">public</a>
+    /
+    <a href="@PrivateCimdUrl" target="_blank" rel="noopener">private_key_jwt</a>
+    documents. Host the JSON at an HTTPS URL, then use that URL as <code>client_id</code>.
+    The <code>client_id</code> inside the document must match the URL it is fetched from.
+</p>
+
+<div class="builder-grid builder-grid-stretch">
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Document fields</h2>
+            <div class="panel-actions">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="SyncFromBuilder">
+                    Sync from builder
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(StatusHint))
+        {
+            <p class="panel-hint mb-2">@StatusHint</p>
+        }
+
+        <div class="field-grid">
+            <label for="cimdClientId">client_id</label>
+            <div class="field-with-link">
+                <InputText id="cimdClientId" class="form-control form-control-sm mono" @bind-Value="Document.ClientId" />
+                @if (CimdDefaults.IsHttpUrl(Document.ClientId))
+                {
+                    <a href="@Document.ClientId" target="_blank" rel="noopener">Open</a>
+                }
+            </div>
+
+            <label for="cimdClientName">client_name</label>
+            <InputText id="cimdClientName" class="form-control form-control-sm" @bind-Value="Document.ClientName" />
+
+            <label for="cimdClientUri">client_uri</label>
+            <InputText id="cimdClientUri" class="form-control form-control-sm mono" @bind-Value="Document.ClientUri" />
+
+            <label for="cimdRedirectUris">redirect_uris</label>
+            <textarea id="cimdRedirectUris" class="form-control form-control-sm mono" rows="3"
+                @bind="Document.RedirectUrisText" placeholder="One URL per line"></textarea>
+
+            <label for="cimdGrantTypes">grant_types</label>
+            <InputText id="cimdGrantTypes" class="form-control form-control-sm mono" @bind-Value="Document.GrantTypesText" />
+
+            <label for="cimdResponseTypes">response_types</label>
+            <InputText id="cimdResponseTypes" class="form-control form-control-sm mono" @bind-Value="Document.ResponseTypesText" />
+
+            <label for="cimdAuthMethod">token auth</label>
+            <InputSelect id="cimdAuthMethod" class="form-select form-select-sm"
+                @bind-Value="Document.TokenEndpointAuthMethod" @bind-Value:after="OnAuthMethodChanged">
+                <option value="none">none</option>
+                <option value="client_secret_post">client_secret_post</option>
+                <option value="client_secret_basic">client_secret_basic</option>
+                <option value="private_key_jwt">private_key_jwt</option>
+            </InputSelect>
+
+            @if (UsesPrivateKeyJwt)
+            {
+                <label for="cimdSigningAlg">signing alg</label>
+                <InputSelect id="cimdSigningAlg" class="form-select form-select-sm"
+                    @bind-Value="Document.TokenEndpointAuthSigningAlg">
+                    <option value="ES256">ES256</option>
+                    <option value="RS256">RS256</option>
+                </InputSelect>
+
+                <label for="cimdJwksUri">jwks_uri</label>
+                <div class="field-with-link">
+                    <InputText id="cimdJwksUri" class="form-control form-control-sm mono" @bind-Value="Document.JwksUri" />
+                    @if (CimdDefaults.IsHttpUrl(Document.JwksUri))
+                    {
+                        <a href="@Document.JwksUri" target="_blank" rel="noopener">Open</a>
+                    }
+                </div>
+            }
+
+            <label for="cimdScope">scope</label>
+            <InputText id="cimdScope" class="form-control form-control-sm" @bind-Value="Document.Scope"
+                placeholder="optional" />
+
+            <label for="cimdTosUri">tos_uri</label>
+            <InputText id="cimdTosUri" class="form-control form-control-sm mono" @bind-Value="Document.TosUri" />
+
+            <label for="cimdPolicyUri">policy_uri</label>
+            <InputText id="cimdPolicyUri" class="form-control form-control-sm mono" @bind-Value="Document.PolicyUri" />
+
+            <label for="cimdLogoUri">logo_uri</label>
+            <InputText id="cimdLogoUri" class="form-control form-control-sm mono" @bind-Value="Document.LogoUri" />
+        </div>
+
+        <div class="panel-actions mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadPublicTemplate">
+                Load public template
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadPrivateTemplate">
+                Load private template
+            </button>
+        </div>
+    </section>
+
+    <section class="panel panel-output panel-fill">
+        <div class="panel-header">
+            <h2 class="panel-title">Document JSON</h2>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyJson">Copy</button>
+        </div>
+
+        @if (!string.IsNullOrEmpty(ClientIdHint))
+        {
+            <p class="panel-hint">@ClientIdHint</p>
+        }
+
+        <pre class="mono url-display url-display-fill mb-0">@DocumentJson</pre>
+    </section>
+</div>
+
+@code {
+    private CimdDocumentModel Document { get; set; } = new();
+    private string? StatusHint { get; set; }
+
+    private string PublicCimdUrl => CimdDefaults.GetDocumentUrl(NavigationManager);
+    private string PrivateCimdUrl => CimdDefaults.GetPrivateClientDocumentUrl(NavigationManager);
+    private string JwksUrl => CimdDefaults.GetJwksDocumentUrl(NavigationManager);
+    private bool UsesPrivateKeyJwt =>
+        string.Equals(Document.TokenEndpointAuthMethod, "private_key_jwt", StringComparison.Ordinal);
+    private string DocumentJson => CimdDocument.ToJson(Document);
+
+    private string? ClientIdHint
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Document.ClientId))
+            {
+                return "Set client_id to the HTTPS URL where this document will be hosted.";
+            }
+
+            if (!CimdDefaults.IsHttpUrl(Document.ClientId))
+            {
+                return "client_id should be an HTTP(S) URL that returns this JSON.";
+            }
+
+            return null;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplateAsync(PublicCimdUrl, overlayWorkspace: true);
+        await base.OnInitializedAsync();
+    }
+
+    private async Task SyncFromBuilder()
+    {
+        await OverlayWorkspaceAsync();
+        StatusHint = "Synced client_id, redirect_uris, response_types, and token auth from the builder.";
+    }
+
+    private Task LoadPublicTemplate() => LoadTemplateAsync(PublicCimdUrl, overlayWorkspace: false);
+
+    private Task LoadPrivateTemplate() => LoadTemplateAsync(PrivateCimdUrl, overlayWorkspace: false);
+
+    private async Task LoadTemplateAsync(string url, bool overlayWorkspace)
+    {
+        try
+        {
+            var json = await Http.GetStringAsync(url);
+            Document = CimdDocument.Parse(json);
+            if (overlayWorkspace)
+            {
+                await OverlayWorkspaceAsync();
+                StatusHint = "Loaded hosted template and overlaid the current builder client.";
+            }
+            else
+            {
+                StatusHint = $"Loaded {url}";
+            }
+        }
+        catch (Exception ex)
+        {
+            if (overlayWorkspace)
+            {
+                await OverlayWorkspaceAsync();
+            }
+
+            StatusHint = $"Could not load {url}: {ex.Message}";
+        }
+    }
+
+    private async Task OverlayWorkspaceAsync()
+    {
+        var client = await SettingsRepository.GetClientAppModelAsync() ?? new ClientAppModel();
+        var authorize = await SettingsRepository.GetAuthorizeParameterModelAsync();
+        if (string.IsNullOrWhiteSpace(client.RedirectUri))
+        {
+            client.RedirectUri = NavigationManager.ToAbsoluteUri("code").ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(client.ClientId))
+        {
+            client.ClientId = PublicCimdUrl;
+        }
+
+        CimdDocument.OverlayWorkspace(Document, CimdDocument.FromWorkspace(client, authorize, JwksUrl));
+    }
+
+    private void OnAuthMethodChanged()
+    {
+        if (!UsesPrivateKeyJwt)
+        {
+            Document.TokenEndpointAuthSigningAlg = "";
+            Document.JwksUri = "";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Document.TokenEndpointAuthSigningAlg))
+        {
+            Document.TokenEndpointAuthSigningAlg = "ES256";
+        }
+
+        if (string.IsNullOrWhiteSpace(Document.JwksUri))
+        {
+            Document.JwksUri = JwksUrl;
+        }
+    }
+
+    private async Task CopyJson()
+    {
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", DocumentJson);
+    }
+}

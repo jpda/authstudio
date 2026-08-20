@@ -18,6 +18,7 @@ public static class AuthorizeUrlSyntax
         "response_type",
         "response_mode",
         "scope",
+        "prompt",
         "resource",
         "code_challenge",
         "code_challenge_method",
@@ -30,7 +31,7 @@ public static class AuthorizeUrlSyntax
         "client_id" => ClientId,
         "redirect_uri" => RedirectUri,
         "code_challenge" or "code_challenge_method" => Pkce,
-        "scope" or "response_type" or "response_mode" or "state" => OAuth,
+        "scope" or "prompt" or "response_type" or "response_mode" or "state" => OAuth,
         "resource" => Resource,
         "request_uri" => Par,
         _ => Other

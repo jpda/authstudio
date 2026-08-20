@@ -35,6 +35,10 @@ public static class CimdDefaults
         return navigationManager.ToAbsoluteUri("signing-key.json").ToString();
     }
 
+    public static bool IsHttpUrl(string? value) =>
+        Uri.TryCreate(value, UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp);
+
     public static bool ShouldDefaultClientId(string? clientId, bool? issuerSupportsCimd)
     {
         return string.IsNullOrWhiteSpace(clientId) || issuerSupportsCimd == true;

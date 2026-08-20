@@ -7,14 +7,24 @@
     <h2 class="panel-title">Client</h2>
 
     <p class="panel-hint">
-        Public CIMD: <code>@PublicCimdUrl</code><br />
-        Private CIMD: <code>@PrivateCimdUrl</code> · JWKS: <a href="@JwksUrl" target="_blank" rel="noopener">jwks.json</a>
+        Public CIMD:
+        <a href="@PublicCimdUrl" target="_blank" rel="noopener" class="mono">@PublicCimdUrl</a><br />
+        Private CIMD:
+        <a href="@PrivateCimdUrl" target="_blank" rel="noopener" class="mono">@PrivateCimdUrl</a>
+        · JWKS: <a href="@JwksUrl" target="_blank" rel="noopener">jwks.json</a>
+        · <a href="cimd">CIMD builder</a>
     </p>
 
     <div class="field-grid">
         <label for="clientId">Client ID</label>
-        <InputText id="clientId" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientId"
-            @bind-Value:after="PersistClientApp" />
+        <div class="field-with-link">
+            <InputText id="clientId" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientId"
+                @bind-Value:after="PersistClientApp" />
+            @if (CimdDefaults.IsHttpUrl(ClientApp.ClientId))
+            {
+                <a href="@ClientApp.ClientId" target="_blank" rel="noopener">Open</a>
+            }
+        </div>
 
         <label for="clientSecret">Client secret</label>
         <InputText id="clientSecret" class="form-control form-control-sm mono" @bind-Value="ClientApp.ClientSecret"

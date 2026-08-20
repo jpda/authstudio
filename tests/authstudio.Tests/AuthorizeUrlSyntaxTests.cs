@@ -9,6 +9,7 @@ public class AuthorizeUrlSyntaxTests
     [InlineData("request_uri", AuthorizeUrlSyntax.Par)]
     [InlineData("code_challenge", AuthorizeUrlSyntax.Pkce)]
     [InlineData("scope", AuthorizeUrlSyntax.OAuth)]
+    [InlineData("prompt", AuthorizeUrlSyntax.OAuth)]
     [InlineData("state", AuthorizeUrlSyntax.OAuth)]
     public void GetCategory_maps_parameters(string name, string expected)
     {

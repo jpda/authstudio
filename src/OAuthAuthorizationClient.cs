@@ -28,6 +28,11 @@ public static class OAuthAuthorizationClient
             parameters["resource"] = request.AuthorizeParameters.Resource;
         }
 
+        if (!string.IsNullOrWhiteSpace(request.AuthorizeParameters.Prompt))
+        {
+            parameters["prompt"] = request.AuthorizeParameters.Prompt.Trim();
+        }
+
         return parameters;
     }
 

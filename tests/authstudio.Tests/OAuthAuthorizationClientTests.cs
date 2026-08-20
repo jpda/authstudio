@@ -27,6 +27,28 @@ public class OAuthAuthorizationClientTests
     }
 
     [Fact]
+    public void BuildAuthorizeParameters_includes_prompt()
+    {
+        var request = SampleRequest();
+        request.AuthorizeParameters.Prompt = "login";
+
+        var parameters = OAuthAuthorizationClient.BuildAuthorizeParameters(request);
+
+        Assert.Equal("login", parameters["prompt"]);
+    }
+
+    [Fact]
+    public void BuildAuthorizeParameters_omits_empty_prompt()
+    {
+        var request = SampleRequest();
+        request.AuthorizeParameters.Prompt = "  ";
+
+        var parameters = OAuthAuthorizationClient.BuildAuthorizeParameters(request);
+
+        Assert.False(parameters.ContainsKey("prompt"));
+    }
+
+    [Fact]
     public void BuildFrontChannelAuthorizeUrl_contains_request_uri()
     {
         var request = SampleRequest();

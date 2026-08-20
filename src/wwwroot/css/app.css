@@ -430,6 +430,12 @@ textarea.form-control {
     }
 }
 
+@media (min-width: 992px) {
+    .builder-grid-stretch {
+        align-items: stretch;
+    }
+}
+
 .builder-config {
     display: flex;
     flex-direction: column;
@@ -448,6 +454,12 @@ textarea.form-control {
 .panel-output {
     border-color: var(--as-panel-output-border);
     box-shadow: 0 1px 3px var(--as-panel-output-shadow);
+}
+
+.panel-fill {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .panel-header {
@@ -535,6 +547,7 @@ textarea.form-control {
     font-size: 0.8125rem;
     color: var(--as-muted);
     margin: 0 0 0.5rem;
+    overflow-wrap: anywhere;
 }
 
 .panel-hint-list {
@@ -581,6 +594,12 @@ textarea.form-control {
     line-height: 1.45;
     max-height: 8rem;
     overflow: auto;
+}
+
+.url-display-fill {
+    flex: 1;
+    min-height: 18rem;
+    max-height: none;
 }
 
 .url-colored .url-punct {
@@ -952,6 +971,29 @@ input[readonly].form-control {
 .form-control-sm {
     font-size: 0.8125rem;
     padding: 0.25rem 0.5rem;
+}
+
+.field-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.field-with-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.field-with-link .form-control {
+    flex: 1;
+}
+
+.field-with-link a {
+    flex-shrink: 0;
+    font-size: 0.75rem;
 }
 
 .assertion-key-input {
