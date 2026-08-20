@@ -1,5 +1,6 @@
 @inject OAuthBuilderActions BuilderActions
 @inject NavigationManager NavigationManager
+@implements IDisposable
 
 <header class="app-header">
     <div class="app-header-brand">
@@ -8,13 +9,19 @@
     </div>
     <nav class="app-header-nav">
         <NavLink href="" Match="NavLinkMatch.All" class="app-header-link">Builder</NavLink>
-        <NavLink href="cimd" class="app-header-link">CIMD</NavLink>
-        <NavLink href="assertion" class="app-header-link">Assertion</NavLink>
         <NavLink href="code" class="app-header-link">Callback</NavLink>
-        <NavLink href="mcp" class="app-header-link">MCP Discovery</NavLink>
+        <HeaderMenu Label="CIMD" Active="IsCimdActive">
+            <NavLink href="cimd" Match="NavLinkMatch.All" class="header-menu-link">Document builder</NavLink>
+            <NavLink href="cimd/lint" class="header-menu-link">Lint &amp; samples</NavLink>
+        </HeaderMenu>
+        <HeaderMenu Label="Tools" Active="IsToolsActive">
+            <NavLink href="assertion" class="header-menu-link">private_key_jwt assertion</NavLink>
+            <NavLink href="mcp" class="header-menu-link">MCP discovery</NavLink>
+        </HeaderMenu>
         <NavLink href="about" class="app-header-link">About</NavLink>
     </nav>
     <div class="app-header-actions">
+        <WidthToggle />
         <ThemeToggle />
         @if (BuilderActions.IsBuilderActive && BuilderActions.AuthorizeAsync is not null)
         {
@@ -24,11 +31,40 @@
 </header>
 
 @code {
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private bool IsCimdActive => IsSectionActive("cimd");
+
+    private bool IsToolsActive => IsSectionActive("assertion", "mcp");
+
+    private bool IsSectionActive(params string[] prefixes)
+    {
+        var path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
+            .Split('?', '#')[0]
+            .Trim('/');
+
+        return prefixes.Any(prefix => path.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith($"{prefix}/", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args)
+    {
+        StateHasChanged();
+    }
+
     private async Task LaunchAuthorize()
     {
         if (BuilderActions.AuthorizeAsync is not null)
         {
             await BuilderActions.AuthorizeAsync();
         }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }

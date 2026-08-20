@@ -12,6 +12,7 @@
             @onclick="() => ApplyPreset(WorkspacePreset.PrivateCimd)">Private CIMD</button>
         <button type="button" class="btn btn-sm @(ActivePreset == WorkspacePreset.Custom ? "btn-primary" : "btn-outline-secondary")"
             @onclick="() => ApplyPreset(WorkspacePreset.Custom)">Custom</button>
+        <a class="btn btn-outline-secondary btn-sm" href="cimd/lint">More CIMD docs…</a>
     </div>
 </section>
 

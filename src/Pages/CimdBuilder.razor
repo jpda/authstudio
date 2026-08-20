@@ -6,6 +6,8 @@
 
 <PageTitle>CIMD builder</PageTitle>
 
+<CimdSubNav />
+
 <h1 class="page-title">Client ID Metadata Document</h1>
 
 <p class="panel-hint">
@@ -15,6 +17,7 @@
     <a href="@PrivateCimdUrl" target="_blank" rel="noopener">private_key_jwt</a>
     documents. Host the JSON at an HTTPS URL, then use that URL as <code>client_id</code>.
     The <code>client_id</code> inside the document must match the URL it is fetched from.
+    See <a href="cimd/lint">lint &amp; samples</a> to check a document or browse valid and invalid examples.
 </p>
 
 <div class="builder-grid builder-grid-stretch">
@@ -122,7 +125,7 @@
             <p class="panel-hint">@ClientIdHint</p>
         }
 
-        <pre class="mono url-display url-display-fill mb-0">@DocumentJson</pre>
+        <JsonView Json="@DocumentJson" CssClass="url-display-fill mb-0" />
     </section>
 </div>
 

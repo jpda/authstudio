@@ -41,6 +41,29 @@
 
             window.authstudioTheme.init();
         })();
+
+        (function () {
+            var key = 'authstudio-width';
+
+            function apply(preference) {
+                document.documentElement.setAttribute('data-width', preference);
+            }
+
+            window.authstudioLayout = {
+                getPreference: function () {
+                    return localStorage.getItem(key) === 'full' ? 'full' : 'default';
+                },
+                applyPreference: function (preference) {
+                    localStorage.setItem(key, preference);
+                    apply(preference);
+                },
+                init: function () {
+                    apply(window.authstudioLayout.getPreference());
+                }
+            };
+
+            window.authstudioLayout.init();
+        })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="OAuth 2.0 and OpenID Connect debugger for authorize URLs, PKCE, CIMD, and private_key_jwt." />
@@ -63,10 +86,9 @@
                 </div>
                 <nav class="app-header-nav">
                     <a href="/" class="app-header-link active">Builder</a>
-                    <a href="cimd" class="app-header-link">CIMD</a>
-                    <a href="mcp" class="app-header-link">MCP Discover</a>
-                    <a href="assertion" class="app-header-link">Assertion</a>
                     <a href="code" class="app-header-link">Callback</a>
+                    <a href="cimd" class="app-header-link">CIMD</a>
+                    <a href="assertion" class="app-header-link">Tools</a>
                     <a href="about" class="app-header-link">About</a>
                 </nav>
             </header>

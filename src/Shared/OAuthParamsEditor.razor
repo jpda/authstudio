@@ -40,7 +40,7 @@
             </select>
             @if (IsCustomPrompt)
             {
-                <input id="promptCustom" class="form-control form-control-sm mono" placeholder="login consent"
+                <input id="promptCustom" class="form-control form-control-sm mono" placeholder="Custom prompt value"
                     value="@AuthorizeParameters.Prompt" @onchange="OnCustomPromptChanged" />
             }
         </div>

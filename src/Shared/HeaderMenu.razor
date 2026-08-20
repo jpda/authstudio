@@ -1,0 +1,23 @@
+<div class="header-menu">
+    <button type="button" class="app-header-link header-menu-toggle @(Active ? "active" : "")"
+        aria-haspopup="true">
+        @Label
+        <svg class="header-menu-caret" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M3.204 5h9.592L8 10.481 3.204 5z" />
+        </svg>
+    </button>
+    <div class="header-menu-items">
+        @ChildContent
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = "";
+
+    [Parameter]
+    public bool Active { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

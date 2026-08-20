@@ -1,0 +1,42 @@
+@inject IJSRuntime JSRuntime
+
+<button type="button" class="btn btn-outline-secondary btn-sm theme-toggle width-toggle" @onclick="ToggleAsync"
+    title="@ToggleTitle" aria-label="@ToggleTitle" aria-pressed="@(_preference == "full")">
+    @if (_preference == "full")
+    {
+        <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M9.5 2.5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1h1.793L5.146 2.854a.5.5 0 1 1 .708-.708L9 5.293V3a.5.5 0 0 1 .5-.5zm-3 7a.5.5 0 0 1 .5.5v2.293l3.146-3.147a.5.5 0 0 1 .708.708L7.707 12.5H9.5a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5v-3a.5.5 0 0 1 .5-.5z" />
+        </svg>
+    }
+    else
+    {
+        <svg class="theme-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2 2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3.707l3.147 3.146a.5.5 0 0 1-.708.708L3 3.707V5.5a.5.5 0 0 1-1 0v-3zm11.5 8a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1h1.793L9.146 9.854a.5.5 0 0 1 .708-.708L13 12.293V10.5a.5.5 0 0 1 .5-.5z" />
+        </svg>
+    }
+</button>
+
+@code {
+    private string _preference = "default";
+
+    private string ToggleTitle => _preference == "full"
+        ? "Layout: full width (click for centered)"
+        : "Layout: centered (click for full width)";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _preference = await JSRuntime.InvokeAsync<string>("authstudioLayout.getPreference");
+        StateHasChanged();
+    }
+
+    private async Task ToggleAsync()
+    {
+        _preference = _preference == "full" ? "default" : "full";
+        await JSRuntime.InvokeVoidAsync("authstudioLayout.applyPreference", _preference);
+    }
+}

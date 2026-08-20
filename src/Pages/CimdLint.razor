@@ -1,0 +1,242 @@
+@page "/cimd/lint"
+@page "/cimd/samples"
+@inject NavigationManager NavigationManager
+@inject HttpClient Http
+@inject IPersistentSettingsRepository SettingsRepository
+@inject WorkspacePresetService WorkspacePresets
+
+<PageTitle>CIMD lint</PageTitle>
+
+<CimdSubNav />
+
+<h1 class="page-title">Lint a Client ID Metadata Document</h1>
+
+<p class="panel-hint">
+    Checks a document against
+    <a href="@CimdSampleCatalog.SpecUri" target="_blank" rel="noopener">draft-ietf-oauth-client-id-metadata-document-02</a>
+    entirely in the browser. Fetch a CORS-readable URL or paste JSON, or load one of the samples below.
+    This does not follow redirects, resolve DNS, or fetch nested
+    <code>jwks_uri</code> / <code>logo_uri</code> values.
+</p>
+
+<div class="builder-grid builder-grid-stretch builder-grid-even">
+    <section class="panel panel-fill">
+        <div class="panel-header">
+            <h2 class="panel-title">Document</h2>
+            <div class="panel-actions">
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleEditing">
+                    @(IsEditing ? "Preview" : "Edit")
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" @onclick="LintPasted"
+                    disabled="@(IsLinting || string.IsNullOrWhiteSpace(LintJson))">Lint</button>
+            </div>
+        </div>
+
+        <label for="lintUrl" class="form-label">Document URL</label>
+        <div class="field-with-link mb-2">
+            <InputText id="lintUrl" class="form-control form-control-sm mono" @bind-Value="LintUrl"
+                placeholder="https://client.example/client.json" />
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="FetchAndLintAsync"
+                disabled="@IsLinting">Fetch</button>
+        </div>
+
+        @if (IsEditing)
+        {
+            <label for="lintJson" class="form-label">JSON</label>
+            <textarea id="lintJson" class="form-control form-control-sm mono cimd-lint-input" rows="20"
+                @bind="LintJson"></textarea>
+        }
+        else if (string.IsNullOrWhiteSpace(LintJson))
+        {
+            <p class="panel-hint mb-0">Fetch a URL, choose a sample, or switch to Edit and paste JSON.</p>
+        }
+        else
+        {
+            <JsonView Json="@LintJson" CssClass="url-display-fill" />
+        }
+    </section>
+
+    <section class="panel panel-output panel-fill">
+        <div class="panel-header">
+            <h2 class="panel-title">Results</h2>
+            @if (LintChecks.Count > 0)
+            {
+                <span class="cimd-lint-summary mono">@Summary</span>
+            }
+        </div>
+
+        @if (!string.IsNullOrEmpty(LintError))
+        {
+            <p class="panel-hint">@LintError</p>
+        }
+
+        @if (LintChecks.Count == 0)
+        {
+            <p class="panel-hint mb-0">No results yet.</p>
+        }
+        else
+        {
+            <McpComplianceChecklist Checks="LintChecks" />
+        }
+    </section>
+</div>
+
+<section class="panel mt-2">
+    <h2 class="panel-title">Samples</h2>
+    <p class="panel-hint">
+        Click a sample to load and lint it. <strong>Send to builder</strong> sets <code>client_id</code>
+        to this origin's hosted URL so you can run an authorize request against a server that fetches CIMD.
+        Fetch-error cases needing HTTP status codes or redirects are omitted because this app is static.
+    </p>
+
+    @foreach (var group in Groups)
+    {
+        <details class="cimd-sample-group" open="@(group.Bucket == CimdSampleBucket.Valid)">
+            <summary>
+                @group.Title
+                <span class="cimd-sample-spec">@group.Samples.Count · @group.Hint</span>
+            </summary>
+            <ul class="cimd-sample-list">
+                @foreach (var sample in group.Samples)
+                {
+                    <li class="cimd-sample-row @(IsSelected(sample) ? "cimd-sample-selected" : "")" role="button"
+                        tabindex="0" title="Lint this document" @onclick="() => LintSampleAsync(sample)"
+                        @onkeydown="args => OnRowKeyDown(args, sample)">
+                        <div>
+                            <strong>@sample.Title</strong>
+                            <span class="cimd-sample-spec">@sample.SpecRef</span>
+                            <p class="panel-hint mb-0">@sample.Description</p>
+                        </div>
+                        <div class="panel-actions" @onclick:stopPropagation="true">
+                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                @onclick="() => SendToBuilderAsync(sample)">Send to builder</button>
+                            <a class="btn btn-outline-secondary btn-sm cimd-sample-open"
+                                href="@SampleHref(sample)" target="_blank" rel="noopener"
+                                title="Open document in a new tab" aria-label="Open document in a new tab">
+                                <svg class="cimd-sample-icon" xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 16 16" aria-hidden="true">
+                                    <path d="M9 2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V3.207L8.354 8.354a.5.5 0 0 1-.708-.708L12.793 2.5H9.5A.5.5 0 0 1 9 2z" />
+                                    <path d="M3 4.5A1.5 1.5 0 0 1 4.5 3H8a.5.5 0 0 1 0 1H4.5a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V8a.5.5 0 0 1 1 0v3.5A1.5 1.5 0 0 1 11.5 13h-7A1.5 1.5 0 0 1 3 11.5v-7z" />
+                                </svg>
+                            </a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </details>
+    }
+</section>
+
+@code {
+    private static readonly SampleGroup[] Groups =
+    [
+        new("Valid", "hosted documents this app uses as client_id values", CimdSampleBucket.Valid),
+        new("Invalid document", "violates draft-02 document rules", CimdSampleBucket.InvalidDocument),
+        new("Fetch error", "bodies a server should reject while reading the response",
+            CimdSampleBucket.FetchError),
+        new("Security policy", "readable JSON with URIs a production AS must not fetch",
+            CimdSampleBucket.SecurityPolicy)
+    ];
+
+    private string LintUrl { get; set; } = "";
+    private string LintJson { get; set; } = "";
+    private string? LintError { get; set; }
+    private IReadOnlyList<ComplianceCheck> LintChecks { get; set; } = [];
+    private bool IsLinting { get; set; }
+    private bool IsEditing { get; set; }
+    private string? SelectedSampleId { get; set; }
+
+    private string Summary
+    {
+        get
+        {
+            var failed = LintChecks.Count(check => check.Status == DiscoveryStepStatus.Failed);
+            var warned = LintChecks.Count(check => check.Status == DiscoveryStepStatus.Warning);
+            return failed == 0 && warned == 0
+                ? "no findings"
+                : $"{failed} failed · {warned} warning";
+        }
+    }
+
+    private bool IsSelected(CimdSample sample) =>
+        string.Equals(SelectedSampleId, sample.Id, StringComparison.Ordinal);
+
+    private string SampleHref(CimdSample sample) =>
+        NavigationManager.ToAbsoluteUri(
+            CimdSampleCatalog.GetHostedPath(sample, new Uri(NavigationManager.BaseUri))).ToString();
+
+    private void ToggleEditing() => IsEditing = !IsEditing;
+
+    private async Task SendToBuilderAsync(CimdSample sample)
+    {
+        var client = await SettingsRepository.GetClientAppModelAsync() ?? new ClientAppModel();
+        await WorkspacePresets.ApplyHostedSampleAsync(client, sample);
+        NavigationManager.NavigateTo("");
+    }
+
+    private async Task LintSampleAsync(CimdSample sample)
+    {
+        SelectedSampleId = sample.Id;
+        LintUrl = SampleHref(sample);
+        await FetchAndLintAsync();
+    }
+
+    private async Task OnRowKeyDown(KeyboardEventArgs args, CimdSample sample)
+    {
+        if (args.Key is "Enter" or " ")
+        {
+            await LintSampleAsync(sample);
+        }
+    }
+
+    private async Task FetchAndLintAsync()
+    {
+        LintError = null;
+        LintChecks = [];
+        if (string.IsNullOrWhiteSpace(LintUrl))
+        {
+            LintError = "Enter a document URL, or switch to Edit and paste JSON.";
+            return;
+        }
+
+        IsLinting = true;
+        try
+        {
+            using var response = await Http.GetAsync(LintUrl.Trim());
+            LintJson = await response.Content.ReadAsStringAsync();
+            IsEditing = false;
+            if (!response.IsSuccessStatusCode)
+            {
+                LintError = $"HTTP {(int)response.StatusCode}. Draft-02 requires 200 OK.";
+            }
+
+            LintChecks = CimdLinter.Lint(LintJson, LintUrl.Trim());
+        }
+        catch (HttpRequestException ex)
+        {
+            LintError = $"Could not fetch that URL from the browser. {ex.Message} "
+                + "If this is a third-party CIMD, paste the JSON instead — most hosts do not send CORS headers.";
+        }
+        catch (Exception ex)
+        {
+            LintError = ex.Message;
+        }
+        finally
+        {
+            IsLinting = false;
+        }
+    }
+
+    private void LintPasted()
+    {
+        LintError = null;
+        var url = string.IsNullOrWhiteSpace(LintUrl) ? null : LintUrl.Trim();
+        LintChecks = CimdLinter.Lint(LintJson, url);
+    }
+
+    private sealed record SampleGroup(string Title, string Hint, CimdSampleBucket Bucket)
+    {
+        public IReadOnlyList<CimdSample> Samples =>
+            CimdSampleCatalog.All.Where(sample => sample.Bucket == Bucket).ToList();
+    }
+}

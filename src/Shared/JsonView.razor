@@ -1,0 +1,19 @@
+<pre class="mono url-display json-view @CssClass">@foreach (var token in JsonHighlighter.Tokenize(Json)){<span class="@TokenClass(token.Kind)">@token.Text</span>}</pre>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Json { get; set; } = "";
+
+    [Parameter]
+    public string CssClass { get; set; } = "";
+
+    private static string TokenClass(JsonTokenKind kind) => kind switch
+    {
+        JsonTokenKind.Key => "json-key",
+        JsonTokenKind.String => "json-string",
+        JsonTokenKind.Number => "json-number",
+        JsonTokenKind.Literal => "json-literal",
+        JsonTokenKind.Punctuation => "json-punct",
+        _ => ""
+    };
+}

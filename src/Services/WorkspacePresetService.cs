@@ -53,6 +53,33 @@ public class WorkspacePresetService(
         return clientApp;
     }
 
+    public async Task<ClientAppModel> ApplyHostedSampleAsync(ClientAppModel clientApp, CimdSample sample)
+    {
+        if (sample.Id == "public")
+        {
+            return await ApplyPublicCimdAsync(clientApp);
+        }
+
+        if (sample.Id == "private")
+        {
+            return await ApplyPrivateCimdAsync(clientApp);
+        }
+
+        clientApp.ClientId = navigationManager
+            .ToAbsoluteUri(CimdSampleCatalog.GetHostedPath(sample, new Uri(navigationManager.BaseUri)))
+            .ToString();
+        clientApp.RedirectUri = navigationManager.ToAbsoluteUri("code").ToString();
+        if (clientApp.TokenAuthMethod == TokenClientAuthMethod.PrivateKeyJwt)
+        {
+            clientApp.TokenAuthMethod = TokenClientAuthMethod.None;
+            clientApp.SigningPrivateKeyJwk = "";
+        }
+
+        await settingsRepository.SetClientAppModelAsync(clientApp);
+        await sessionRepository.SetActivePresetAsync(WorkspacePreset.Custom.ToString());
+        return clientApp;
+    }
+
     public async Task MarkCustomAsync()
     {
         await sessionRepository.SetActivePresetAsync(WorkspacePreset.Custom.ToString());

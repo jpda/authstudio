@@ -41,7 +41,8 @@ public static class CimdDefaults
 
     public static bool ShouldDefaultClientId(string? clientId, bool? issuerSupportsCimd)
     {
-        return string.IsNullOrWhiteSpace(clientId) || issuerSupportsCimd == true;
+        return string.IsNullOrWhiteSpace(clientId)
+            || (issuerSupportsCimd == true && !IsHttpUrl(clientId));
     }
 
     public static bool TryReadMetadataDocumentSupport(JsonElement root)
