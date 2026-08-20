@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
+    <base href="/" />
     <script>
         (function () {
             var key = 'authstudio-theme';
@@ -68,11 +69,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="OAuth 2.0 and OpenID Connect debugger for authorize URLs, PKCE, CIMD, and private_key_jwt." />
     <title>authstudio</title>
-    <link rel="preload" href="css/app.css" as="style" />
-    <link rel="preload" href="_framework/blazor.webassembly.js" as="script" />
-    <base href="/" />
-    <link href="css/app.css" rel="stylesheet" />
-    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="preload" href="/_framework/blazor.webassembly.js" as="script" />
+    <link href="/css/app.css" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
 </head>
 
 <body>
@@ -85,10 +84,10 @@
                 </div>
                 <nav class="app-header-nav">
                     <a href="/" class="app-header-link active">Builder</a>
-                    <a href="code" class="app-header-link">Callback</a>
-                    <a href="cimd" class="app-header-link">CIMD</a>
-                    <a href="assertion" class="app-header-link">Tools</a>
-                    <a href="about" class="app-header-link">About</a>
+                    <a href="/code" class="app-header-link">Callback</a>
+                    <a href="/cimd" class="app-header-link">CIMD</a>
+                    <a href="/assertion" class="app-header-link">Tools</a>
+                    <a href="/about" class="app-header-link">About</a>
                 </nav>
             </header>
             <main class="app-main">
@@ -117,7 +116,7 @@
 
             window.authstudioCryptoLoading = new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.src = 'js/cryptoInterop.js';
+                script.src = '/js/cryptoInterop.js';
                 script.onload = () => {
                     delete window.authstudioCryptoLoading;
                     resolve();
@@ -132,7 +131,7 @@
             return window.authstudioCryptoLoading;
         };
     </script>
-    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="/_framework/blazor.webassembly.js"></script>
 </body>
 
 </html>
