@@ -1,0 +1,9 @@
+{
+  "client_id": "https://example.com/client.json",
+  "client_name": "file: jwks_uri",
+  "redirect_uris": ["https://oauth.studio/code"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "jwks_uri": "file:///etc/passwd"
+}

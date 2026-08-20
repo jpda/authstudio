@@ -1,0 +1,8 @@
+{
+  "client_id": "https://admin@example.com/client.json",
+  "client_name": "userinfo in client_id",
+  "redirect_uris": ["https://oauth.studio/code"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}

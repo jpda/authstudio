@@ -1,0 +1,22 @@
+{
+  "client_id": "https://example.com/client.json",
+  "client_name": "Private key in jwks",
+  "redirect_uris": ["https://oauth.studio/code"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "jwks": {
+    "keys": [
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "kid": "example-private-material",
+        "use": "sig",
+        "alg": "ES256",
+        "x": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "y": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+        "d": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+      }
+    ]
+  }
+}

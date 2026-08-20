@@ -1,0 +1,9 @@
+{
+  "client_id": "https://example.com/client.json",
+  "client_name": "javascript logo_uri",
+  "redirect_uris": ["https://oauth.studio/code"],
+  "grant_types": ["authorization_code"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "logo_uri": "javascript:alert(1)"
+}
