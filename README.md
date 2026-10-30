@@ -1,19 +1,19 @@
 # oauth.studio
 
-This is a small, basic app intended to make working with oauth2 & oidc a little easier. Originally written in blazor wasm (by hand!) to make PKCE code flows easier to generate, it has grown into a more comprehensive set of tools for testing different protocol flows and scenarios.
+This app runs at [https://oauth.studio](https://oauth.studio). It's a small, basic app intended to make working with oauth2 & oidc a little easier. Originally written in blazor wasm (by hand!) to make PKCE code flows easier to generate, it has grown into a more comprehensive set of tools for testing different protocol flows and scenarios.
 
 ## docker
 
 This is wasm, so it runs in the browser. A container is available if you want to run it locally.
 
 ```bash
-docker run -p 8080:80 ghcr.io/jpda/oauth.studio:latest
+docker run -p 8080:8080 ghcr.io/jpda/authstudio:latest
 ```
 
 To set your host for CIMD, set the `AUTHSTUDIO_PUBLIC_ORIGIN` var to your desired public origin, for example:
 
 ```bash
-docker run -p 8080:80 -e AUTHSTUDIO_PUBLIC_ORIGIN=http://localhost:8080 ghcr.io/jpda/oauth.studio:latest
+docker run -p 8080:8080 -e AUTHSTUDIO_PUBLIC_ORIGIN=http://localhost:8080 ghcr.io/jpda/authstudio:latest
 ```
 
 ## CIMD

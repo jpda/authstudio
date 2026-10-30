@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Semver bump. Auto reads commits since the last tag.
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          git fetch --tags --force origin
+          bump="${{ github.event.inputs.bump }}"
+          if [ -z "$bump" ]; then
+            bump=auto
+          fi
+          tag="$(bash .github/scripts/next-version.sh "$bump")"
+          echo "version=${tag}" >> "$GITHUB_OUTPUT"
+
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            tagged="$(git rev-parse "refs/tags/${tag}^{}")"
+            if [ "$tagged" != "$(git rev-parse HEAD)" ]; then
+              echo "Tag ${tag} already points at ${tagged}" >&2
+              exit 1
+            fi
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "Release ${tag} already exists"
+              exit 0
+            fi
+          fi
+
+          image="ghcr.io/$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$tag" \
+            -f target_commitish="$GITHUB_SHA" \
+            --jq '.body // ""' > "$RUNNER_TEMP/notes.md"
+          printf '\n## Container\n\n`%s:%s`\n`%s:latest`\n' \
+            "$image" "$tag" "$image" >> "$RUNNER_TEMP/notes.md"
+          gh release create "$tag" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "$tag" \
+            --notes-file "$RUNNER_TEMP/notes.md"
+
+  publish:
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/container.yml
+    with:
+      version: ${{ needs.release.outputs.version }}
