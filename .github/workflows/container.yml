@@ -7,13 +7,6 @@ on:
         description: Image tag shared with the git release, such as v1.0.0
         required: true
         type: string
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Extra image tag to push along with latest
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -57,8 +50,8 @@ jobs:
         REPOSITORY_URL=https://github.com/${{ github.repository }}
       meta-images: ${{ needs.prepare.outputs.image }}
       meta-tags: |
-        type=raw,value=latest,enable=${{ github.event_name == 'workflow_call' }}
-        type=raw,value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+        type=raw,value=latest
+        type=raw,value=${{ inputs.version }}
         type=sha,format=long
     secrets:
       registry-auths: |
