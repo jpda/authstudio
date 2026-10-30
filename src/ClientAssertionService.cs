@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.JSInterop;
 
@@ -85,10 +86,22 @@ public static class JwtDecoder
             parts.Length > 2 ? parts[2] : "");
     }
 
+    public static string PrettyPrint(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        return JsonSerializer.Serialize(document, Indented);
+    }
+
+    private static readonly JsonSerializerOptions Indented = new()
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     private static string FormatJson(byte[] json)
     {
         using var document = JsonDocument.Parse(json);
-        return JsonSerializer.Serialize(document, new JsonSerializerOptions { WriteIndented = true });
+        return JsonSerializer.Serialize(document, Indented);
     }
 }
 

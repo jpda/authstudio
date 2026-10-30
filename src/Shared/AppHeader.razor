@@ -15,6 +15,7 @@
             <NavLink href="cimd/lint" class="header-menu-link">Lint &amp; samples</NavLink>
         </HeaderMenu>
         <HeaderMenu Label="Tools" Active="IsToolsActive">
+            <NavLink href="jwt" class="header-menu-link">JWT decoder</NavLink>
             <NavLink href="assertion" class="header-menu-link">private_key_jwt assertion</NavLink>
             <NavLink href="mcp" class="header-menu-link">MCP discovery</NavLink>
         </HeaderMenu>
@@ -38,7 +39,7 @@
 
     private bool IsCimdActive => IsSectionActive("cimd");
 
-    private bool IsToolsActive => IsSectionActive("assertion", "mcp");
+    private bool IsToolsActive => IsSectionActive("jwt", "assertion", "mcp");
 
     private bool IsSectionActive(params string[] prefixes)
     {

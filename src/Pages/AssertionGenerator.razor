@@ -81,19 +81,11 @@
         }
         else
         {
-            <div class="url-display mono mb-2">@Assertion</div>
-            <p class="panel-hint mb-1">
+            <p class="panel-hint mb-2">
                 <code>client_assertion_type</code>:
                 <span class="mono">@PrivateKeyJwtGenerator.ClientAssertionType</span>
             </p>
-
-            <h3 class="panel-subtitle">Header</h3>
-            <pre class="mono url-display">@DecodedHeader</pre>
-
-            <h3 class="panel-subtitle">Payload</h3>
-            <pre class="mono url-display">@DecodedPayload</pre>
-
-            <JwtInspector Jwt="@Assertion" Label="client assertion" OpenByDefault="true" />
+            <JwtInspector Jwt="@Assertion" Label="client assertion" />
         }
     </section>
 </div>
@@ -105,8 +97,6 @@
     private int LifetimeSeconds { get; set; } = 300;
     private string PrivateKeyJwk { get; set; } = "";
     private string Assertion { get; set; } = "";
-    private string DecodedHeader { get; set; } = "";
-    private string DecodedPayload { get; set; } = "";
     private string? GeneratorError { get; set; }
     private string? SyncHint { get; set; }
 
@@ -171,8 +161,6 @@
     {
         GeneratorError = null;
         Assertion = "";
-        DecodedHeader = "";
-        DecodedPayload = "";
 
         if (string.IsNullOrWhiteSpace(ClientId))
         {
@@ -201,9 +189,6 @@
                 Algorithm,
                 LifetimeSeconds);
             await WorkspaceSession.SetLastClientAssertionAsync(Assertion);
-            var decoded = JwtDecoder.Decode(Assertion);
-            DecodedHeader = decoded.Header;
-            DecodedPayload = decoded.Payload;
         }
         catch (Exception ex)
         {

@@ -1,0 +1,37 @@
+@if (Notes.Count > 0)
+{
+    <h3 class="panel-subtitle jwt-times-title">Times</h3>
+    <dl class="jwt-times">
+        @foreach (var note in Notes)
+        {
+            <div class="jwt-time">
+                <dt class="jwt-time-key mono">@note.Claim</dt>
+                <dd class="jwt-time-body">
+                    <span class="jwt-time-label">@note.Label</span>
+                    @if (!string.IsNullOrEmpty(note.AbsoluteUtc))
+                    {
+                        <span class="mono jwt-time-abs">@note.AbsoluteUtc</span>
+                    }
+                    <span class="jwt-time-relative @ToneClass(note.Tone)">@note.Relative</span>
+                    @if (note.WasMilliseconds)
+                    {
+                        <span class="jwt-time-extra">Interpreted as milliseconds.</span>
+                    }
+                </dd>
+            </div>
+        }
+    </dl>
+}
+
+@code {
+    [Parameter]
+    public IReadOnlyList<JwtTimeNote> Notes { get; set; } = [];
+
+    private static string ToneClass(JwtTimeTone tone) => tone switch
+    {
+        JwtTimeTone.Ok => "jwt-tone-ok",
+        JwtTimeTone.Warning => "jwt-tone-warning",
+        JwtTimeTone.Danger => "jwt-tone-danger",
+        _ => "jwt-tone-neutral"
+    };
+}

@@ -1,0 +1,61 @@
+@page "/jwt"
+
+<PageTitle>JWT decoder</PageTitle>
+
+<h1 class="page-title">JWT decoder</h1>
+<p class="panel-hint">
+    Paste a compact JWS or JWE. Decoding stays in this browser and the token is not saved.
+    A signature check may fetch the issuer's public JWKS.
+</p>
+
+<div class="builder-grid jwt-tool-grid">
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title">Token</h2>
+            @if (!string.IsNullOrEmpty(Token))
+            {
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="Clear">Clear</button>
+            }
+        </div>
+        <textarea id="jwt-input" class="form-control form-control-sm mono jwt-paste" rows="16"
+            aria-label="Compact JWT" spellcheck="false" autocapitalize="off" autocomplete="off"
+            placeholder="eyJhbGciOi..." @bind="Token" @bind:event="oninput"></textarea>
+        <p class="panel-hint mb-2 mt-2">
+            Three segments for a signed token, five for a JWE. A Bearer prefix and line breaks are ignored.
+        </p>
+        <div class="panel-actions">
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadSignedExample">Signed example</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LoadEncryptedExample">Encrypted example</button>
+        </div>
+    </section>
+
+    <section class="panel panel-output builder-output">
+        <h2 class="panel-title">Decoded</h2>
+        @if (string.IsNullOrWhiteSpace(Token))
+        {
+            <p class="panel-hint mb-0">Paste a token, or load an example, to see the header and payload in order.</p>
+        }
+        else
+        {
+            <JwtInspector Jwt="@Token" Label="pasted token" VerificationDelayMilliseconds="400" />
+        }
+    </section>
+</div>
+
+@code {
+    private const string SignedExample =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRlbW8tMSJ9." +
+        "eyJpc3MiOiJodHRwczovL2lzc3Vlci5leGFtcGxlIiwic3ViIjoiMTIzNDU2Nzg5MCIsImF1ZCI6WyJodHRwczovL2FwaS5leGFtcGxlIiwiaHR0cHM6Ly9hcHAuZXhhbXBsZSJdLCJpYXQiOjE1MTYyMzkwMjIsIm5iZiI6MTUxNjIzOTAyMiwiZXhwIjo0MTAyNDQ0ODAwLCJhdXRoX3RpbWUiOjE1MTYyMzkwMDAsInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJuYW1lIjoiQWRhIExvdmVsYWNlIiwiYW1yIjpbInB3ZCIsIm90cCJdLCJhZGRyZXNzIjp7ImxvY2FsaXR5IjoiTG9uZG9uIiwiY291bnRyeSI6IlVLIn19." +
+        "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+    private const string EncryptedExample =
+        "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiZGVtby0xIiwidHlwIjoiSldUIn0.ZW5jS2V5.aXY.Y2lwaGVy.dGFn";
+
+    private string Token { get; set; } = "";
+
+    private void Clear() => Token = "";
+
+    private void LoadSignedExample() => Token = SignedExample;
+
+    private void LoadEncryptedExample() => Token = EncryptedExample;
+}

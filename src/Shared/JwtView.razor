@@ -1,0 +1,179 @@
+@inject IJSRuntime JS
+
+@if (Segments.Count > 0)
+{
+    <div class="jwt-view @(_focus is null ? null : "jwt-has-focus")" @onmouseleave="ClearFocus">
+        @if (!string.IsNullOrEmpty(StructureMessage))
+        {
+            <p class="jwt-structure-note">@StructureMessage</p>
+        }
+
+        <ul class="url-legend jwt-legend" aria-label="JWT segments">
+            @for (var index = 0; index < Segments.Count; index++)
+            {
+                var segmentIndex = index;
+                <li class="@JwtPresentation.CssClass(Segments[segmentIndex].Role) @ItemState(segmentIndex)"
+                    @onmouseenter="() => Focus(segmentIndex)">@Segments[segmentIndex].Label</li>
+            }
+        </ul>
+
+        <div class="jwt-compact mono" aria-label="Compact token">
+            @for (var index = 0; index < Segments.Count; index++)
+            {
+                var segmentIndex = index;
+                if (segmentIndex > 0)
+                {
+                    <span class="jwt-dot">.</span>
+                }
+                <span class="jwt-seg @JwtPresentation.CssClass(Segments[segmentIndex].Role) @ItemState(segmentIndex)"
+                    @onmouseenter="() => Focus(segmentIndex)">@Segments[segmentIndex].Text</span>
+            }
+        </div>
+
+        @if (Header is not null)
+        {
+            <section class="jwt-block jwt-block-header @PanelState(0)" @onmouseenter="() => Focus(0)">
+                <div class="jwt-section-header">
+                    <h3 class="panel-subtitle">Header</h3>
+                    @if (Header.Json is not null)
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyHeader">Copy</button>
+                    }
+                </div>
+                @if (Header.Json is not null)
+                {
+                    <JsonView Json="@Header.Json" CssClass="jwt-json" />
+                    @foreach (var note in HeaderNotes)
+                    {
+                        <p class="jwt-alg-note @(note.IsWarning ? "jwt-alg-warning" : null)">@note.Text</p>
+                    }
+                }
+                else
+                {
+                    <p class="panel-hint text-danger mb-0">@Header.Error</p>
+                }
+            </section>
+        }
+
+        @if (Segments.Count == 5)
+        {
+            <p class="panel-hint jwt-encrypted-hint">The payload is encrypted. Only the header is readable until you decrypt.</p>
+        }
+
+        @if (Payload is not null)
+        {
+            <section class="jwt-block jwt-block-payload @PanelState(1)" @onmouseenter="() => Focus(1)">
+                <div class="jwt-section-header">
+                    <h3 class="panel-subtitle">Payload</h3>
+                    @if (Payload.Json is not null)
+                    {
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CopyPayload">Copy</button>
+                    }
+                </div>
+                @if (Payload.Json is not null)
+                {
+                    <JsonView Json="@Payload.Json" CssClass="jwt-json" />
+                    <JwtTimeList Notes="@TimeNotes" />
+                }
+                else
+                {
+                    <p class="panel-hint text-danger mb-0">@Payload.Error</p>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string Token { get; set; } = "";
+
+    private string _seen = "";
+    private int? _focus;
+    private IReadOnlyList<JwtSegment> Segments { get; set; } = [];
+    private string? StructureMessage { get; set; }
+    private JwtDecodedSegment? Header { get; set; }
+    private JwtDecodedSegment? Payload { get; set; }
+    private IReadOnlyList<JwtHeaderNote> HeaderNotes { get; set; } = [];
+    private IReadOnlyList<JwtTimeNote> TimeNotes { get; set; } = [];
+
+    protected override void OnParametersSet()
+    {
+        var token = JwtPresentation.Normalize(Token);
+        if (token != _seen)
+        {
+            _seen = token;
+            _focus = null;
+        }
+
+        Segments = JwtPresentation.Split(token);
+        StructureMessage = JwtPresentation.StructureMessage(Segments.Count);
+        Header = null;
+        Payload = null;
+        HeaderNotes = [];
+        TimeNotes = [];
+
+        if (Segments.Count == 0)
+        {
+            return;
+        }
+
+        var header = JwtPresentation.DecodeJson(Segments[0].Text);
+        if (header.Json is not null || Segments[0].Role == JwtSegmentRole.Header)
+        {
+            Header = header;
+            if (header.Json is not null)
+            {
+                HeaderNotes = JwtPresentation.ReadHeaderNotes(header.Json, Segments.Count);
+            }
+        }
+
+        if (Segments.Count > 1 && Segments[1].Role == JwtSegmentRole.Payload)
+        {
+            var payload = JwtPresentation.DecodeJson(Segments[1].Text);
+            Payload = payload;
+            if (payload.Json is not null)
+            {
+                TimeNotes = JwtPresentation.ReadTimeNotes(payload.Json, DateTimeOffset.UtcNow);
+            }
+        }
+    }
+
+    private void Focus(int index) => _focus = index;
+
+    private void ClearFocus() => _focus = null;
+
+    private string ItemState(int index)
+    {
+        if (_focus is null)
+        {
+            return "";
+        }
+
+        return _focus == index ? "jwt-seg-focused" : "jwt-seg-dimmed";
+    }
+
+    private string PanelState(int index)
+    {
+        if (_focus is null)
+        {
+            return "";
+        }
+
+        return _focus == index ? "jwt-panel-focused" : "jwt-panel-dimmed";
+    }
+
+    private Task CopyHeader() => Copy(Header?.Json);
+
+    private Task CopyPayload() => Copy(Payload?.Json);
+
+    private async Task Copy(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", value);
+    }
+}

@@ -50,13 +50,15 @@ public class JwtVerificationService(
                 $"Verification is not implemented for {header.Alg}.");
         }
 
-        var jwksUri = await ResolveJwksUriAsync(claims);
-        if (string.IsNullOrWhiteSpace(jwksUri))
+        var resolved = await ResolveJwksUriAsync(claims);
+        if (resolved.Uri is null)
         {
             return new JwtVerificationResult(
                 JwtSignatureStatus.KeysUnavailable,
-                "No JWKS URI on the saved issuer. Fetch discovery on the builder, or ensure the token has an iss claim.");
+                resolved.Failure ?? "No JWKS URI is available for this token.");
         }
+
+        var jwksUri = resolved.Uri;
 
         string? keyJson;
         try
@@ -121,28 +123,37 @@ public class JwtVerificationService(
         }
     }
 
-    private async Task<string?> ResolveJwksUriAsync(IEnumerable<KeyValuePair<string, string>>? claims)
+    private async Task<(string? Uri, string? Failure)> ResolveJwksUriAsync(
+        IEnumerable<KeyValuePair<string, string>>? claims)
     {
         var issuer = await settingsRepository.GetIssuerModelAsync();
         if (!string.IsNullOrWhiteSpace(issuer?.JwksUri))
         {
-            return issuer.JwksUri;
+            return (issuer.JwksUri, null);
         }
 
         var iss = claims is null ? null : CompactToken.GetClaimValue(claims, "iss");
         if (string.IsNullOrWhiteSpace(iss))
         {
-            return null;
+            return (null, "No JWKS URI on the saved issuer, and this token has no iss claim to discover from.");
         }
 
         try
         {
             var config = await OpenIdDiscovery.FetchAsync(http, iss, "");
-            return string.IsNullOrWhiteSpace(config.JwksUri) ? null : config.JwksUri;
+            if (string.IsNullOrWhiteSpace(config.JwksUri))
+            {
+                return (null, $"Discovery for {iss} did not include a jwks_uri.");
+            }
+
+            return (config.JwksUri, null);
         }
-        catch
+        catch (Exception ex)
         {
-            return null;
+            var detail = ex.Message.Contains("Failed to fetch", StringComparison.OrdinalIgnoreCase)
+                ? "The browser could not reach it. The issuer may be stopped, or its HTTPS certificate untrusted."
+                : ex.Message;
+            return (null, $"Could not discover a JWKS for iss {iss}. {detail}");
         }
     }
 
