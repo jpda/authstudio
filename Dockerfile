@@ -14,6 +14,7 @@ RUN dotnet publish src/authstudio.csproj -c Release -o /app/publish \
     -p:SourceRevisionId=${SOURCE_REVISION}
 
 FROM nginx:1.27-alpine
+LABEL org.opencontainers.image.description="self-hosted oauth.studio"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/40-cimd-origin.sh /docker-entrypoint.d/40-cimd-origin.sh
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html
