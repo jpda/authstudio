@@ -1,0 +1,16 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/loopback-jwks.json",
+  "client_name": "Loopback jwks_uri",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "token_endpoint_auth_signing_alg": "ES256",
+  "jwks_uri": "https://127.0.0.1:47123/jwks.json"
+}

@@ -26,6 +26,7 @@ RUN find /usr/share/nginx/html -type f \( -name '*.br' -o -name '*.gz' \) -delet
         /usr/share/nginx/html/private-client.json \
         /usr/share/nginx/html/local.json \
         /usr/share/nginx/html/private-local.json \
-        /etc/authstudio/cimd/
+        /etc/authstudio/cimd/ \
+    && cp -r /usr/share/nginx/html/cimd-e2e /etc/authstudio/cimd/cimd-e2e
 EXPOSE 8080
 HEALTHCHECK CMD wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1

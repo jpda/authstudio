@@ -1,0 +1,1 @@
+/cimd-e2e/redirect-loopback.json https://127.0.0.1:47123/client.json 302
