@@ -1,0 +1,16 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/link-local-jwks.json",
+  "client_name": "Link-local jwks_uri",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "token_endpoint_auth_signing_alg": "ES256",
+  "jwks_uri": "https://169.254.169.254/latest/meta-data/jwks.json"
+}

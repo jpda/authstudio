@@ -35,4 +35,9 @@ for name in client.json private-client.json local.json private-local.json; do
         "$template_dir/$name" > "$html_dir/$name"
 done
 
+for template in "$template_dir"/cimd-e2e/*.json; do
+    sed -e "s|https://oauth.studio|${origin}|g" \
+        "$template" > "$html_dir/cimd-e2e/$(basename "$template")"
+done
+
 echo "Client metadata documents now use ${origin}"

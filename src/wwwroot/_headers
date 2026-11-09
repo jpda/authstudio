@@ -33,3 +33,6 @@
 
 /index.html
   Cache-Control: no-cache
+
+/cimd-e2e/*
+  Cache-Control: no-cache
