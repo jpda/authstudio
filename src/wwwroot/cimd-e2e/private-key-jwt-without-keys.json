@@ -1,0 +1,17 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/private-key-jwt-without-keys.json",
+  "client_name": "Private key JWT without keys",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_methods_supported": [
+    "none",
+    "private_key_jwt"
+  ]
+}
