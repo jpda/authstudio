@@ -1,0 +1,29 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/private-key-in-jwks.json",
+  "client_name": "Private key in jwks",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "token_endpoint_auth_signing_alg": "ES256",
+  "jwks": {
+    "keys": [
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "kid": "published-private-key",
+        "use": "sig",
+        "alg": "ES256",
+        "x": "iP21O9Fg3hZCjmMe2z_-RUVpEhD6zt4xH8IAVC65Kx8",
+        "y": "tjPs13j2oI0RPz5DjDRLTKAFwm_qojRuIcTHoUUbl2M",
+        "d": "2BZlPSOmNvfljRKeQWoOFq9sEyw5WNcnixNFdkIQNIw"
+      }
+    ]
+  }
+}

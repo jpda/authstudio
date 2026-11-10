@@ -1,0 +1,17 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/cross-origin-post-logout.json",
+  "client_name": "Cross-origin post logout redirect",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "none",
+  "post_logout_redirect_uris": [
+    "https://example.com/logout"
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "client_id": "https://oauth.studio/cimd-e2e/symmetric-jwks.json",
+  "client_name": "Symmetric key in jwks",
+  "redirect_uris": [
+    "https://oauth.studio/code"
+  ],
+  "grant_types": [
+    "authorization_code"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "private_key_jwt",
+  "jwks": {
+    "keys": [
+      {
+        "kty": "oct",
+        "kid": "published-shared-secret",
+        "k": "-ahUHQ_rc0vCbDF9F7Jrb_00hRuqNlpwYuUE3TLI6Oo"
+      }
+    ]
+  }
+}
